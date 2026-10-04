@@ -1,9 +1,9 @@
 ==========
 A matrix is a rectangular array of numbers that can represent a linear combination of vectors, where each row represents a vector and each column represents a component of the vectors. It's essentially a table that shows how each column of numbers can be combined to produce a specific vector or set of vectors, which is a fundamental concept in linear algebra for machine learning.
 ==========
-Prompt: 234 tokens, 2095.988 tokens-per-sec
-Generation: 71 tokens, 255.182 tokens-per-sec
+Prompt: 234 tokens, 2022.206 tokens-per-sec
+Generation: 71 tokens, 259.340 tokens-per-sec
 Peak memory: 0.964 GB
 
 Fetching 6 files:   0%|          | 0/6 [00:00<?, ?it/s]
-Fetching 6 files: 100%|██████████| 6/6 [00:00<00:00, 2839.43it/s]
+Fetching 6 files: 100%|██████████| 6/6 [00:00<00:00, 3719.45it/s]

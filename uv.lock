@@ -76,11 +76,15 @@ name = "foundations"
 version = "0.1.0"
 source = { editable = "00-foundations" }
 dependencies = [
+    { name = "huggingface-hub" },
     { name = "mlx-lm" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "mlx-lm", specifier = ">=0.32.0" }]
+requires-dist = [
+    { name = "huggingface-hub", specifier = ">=1.33.0" },
+    { name = "mlx-lm", specifier = ">=0.32.0" },
+]
 
 [[package]]
 name = "fsspec"

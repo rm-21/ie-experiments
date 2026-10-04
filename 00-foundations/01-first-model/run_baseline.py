@@ -19,8 +19,8 @@ LESSON_DIR = Path(__file__).resolve().parent
 BENCH_DIR = LESSON_DIR / "benchmarks"
 
 
-MAX_TOKENS = 64
-RUNS = 2
+MAX_TOKENS = 500
+RUNS = 4
 
 QUESTION = "Explain a matrix in two sentences."
 CONTEXT = (
