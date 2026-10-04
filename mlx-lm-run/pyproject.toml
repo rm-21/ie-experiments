@@ -1,0 +1,19 @@
+[project]
+name = "mlx-lm-run"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Rishabh Mittal", email = "mittalrishabh181@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "mlx-lm>=0.32.0",
+]
+
+[project.scripts]
+mlx-lm-run = "mlx_lm_run:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
