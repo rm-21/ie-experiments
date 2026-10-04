@@ -12,7 +12,12 @@ import sys
 import time
 from pathlib import Path
 
-from mlx_lm_run import BENCH_DIR, MODEL, PROJECT_DIR, resolved_revision
+from foundations import MODEL, resolved_revision
+
+# Outputs live next to this script, whatever directory you run it from.
+LESSON_DIR = Path(__file__).resolve().parent
+BENCH_DIR = LESSON_DIR / "benchmarks"
+
 
 MAX_TOKENS = 64
 RUNS = 2
@@ -87,7 +92,7 @@ def main() -> None:
         writer = csv.DictWriter(f, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    print(f"saved: {out.relative_to(PROJECT_DIR)}")
+    print(f"saved: {out.relative_to(LESSON_DIR)}")
 
 
 if __name__ == "__main__":

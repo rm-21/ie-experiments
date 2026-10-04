@@ -33,32 +33,6 @@ lint: install
 [no-exit-message]
 all: install format lint
 
-# ── Lab: week 01 baseline ─────────────────────────────────────────────────────
-
-[doc('Step 1: record environment -> mlx-lm-run/ENVIRONMENT.md')]
-[group('lab')]
-env: install
-    uv run mlx-lm-run/scripts/record_env.py
-
-[doc('Step 2: CLI baseline, 3 prompts x 2 runs -> benchmarks/week-01-baseline.csv')]
-[group('lab')]
-baseline: install
-    uv run mlx-lm-run/scripts/run_baseline.py
-
-[doc('Step 3: tokenize plain text -> benchmarks/tokens.json')]
-[group('lab')]
-tokens: install
-    uv run mlx-lm-run/scripts/inspect_tokens.py
-
-[doc('Step 4: build notes/week-01.md from the results (keeps your observation)')]
-[group('lab')]
-notes:
-    uv run mlx-lm-run/scripts/write_notes.py
-
-[doc('Run the whole week-01 lab: env, baseline, tokens, notes')]
-[group('lab')]
-week-01: env baseline tokens notes
-
 # ── Clean ─────────────────────────────────────────────────────────────────────
 
 [confirm('Remove all temporary files?')]

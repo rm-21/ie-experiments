@@ -4,7 +4,7 @@ requires-python = ">=3.14"
 
 [manifest]
 members = [
-    "mlx-lm-run",
+    "foundations",
 ]
 
 [manifest.dependency-groups]
@@ -70,6 +70,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/4b/51/a182494d1d8dde124
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/2a/4b1ea3f2180be251a5cff1e70c8a5b7994ffa5c8eab8937901f8a9db58fe/filelock-4.0.10-py3-none-any.whl", hash = "sha256:698048d158dc3c9e18cc5e88b3efdd4bd0e77d76686b22adb4511cc4b2c2f0db", size = 111193, upload-time = "2026-10-03T23:40:47.334Z" },
 ]
+
+[[package]]
+name = "foundations"
+version = "0.1.0"
+source = { editable = "00-foundations" }
+dependencies = [
+    { name = "mlx-lm" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "mlx-lm", specifier = ">=0.32.0" }]
 
 [[package]]
 name = "fsspec"
@@ -314,17 +325,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/96/6f/c87a4e092194c77b3
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/ed/99cd7d36a1671851b41df06b59b73825bb95b8ab8b388ac871ddf9ae1523/mlx_lm-0.32.0-py3-none-any.whl", hash = "sha256:9a0f3843135fd88d36ad791f0d82210cdc4130c5c1cb5416f5f0c4b56a135778", size = 513667, upload-time = "2026-10-01T04:44:40.74Z" },
 ]
-
-[[package]]
-name = "mlx-lm-run"
-version = "0.1.0"
-source = { editable = "mlx-lm-run" }
-dependencies = [
-    { name = "mlx-lm" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "mlx-lm", specifier = ">=0.32.0" }]
 
 [[package]]
 name = "mlx-metal"

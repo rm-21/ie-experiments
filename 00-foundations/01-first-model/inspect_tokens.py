@@ -6,9 +6,15 @@ higher because the chat template adds role/control tokens around your text.
 """
 
 import json
+from pathlib import Path
 
+from foundations import resolved_revision, snapshot_dir
 from mlx_lm import load
-from mlx_lm_run import BENCH_DIR, PROJECT_DIR, resolved_revision, snapshot_dir
+
+# Outputs live next to this script, whatever directory you run it from.
+LESSON_DIR = Path(__file__).resolve().parent
+BENCH_DIR = LESSON_DIR / "benchmarks"
+
 
 TEXTS = {
     "original": "Explain a matrix in two sentences.",
@@ -40,7 +46,7 @@ def main() -> None:
     out = BENCH_DIR / "tokens.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(records, indent=2, ensure_ascii=False) + "\n")
-    print(f"saved: {out.relative_to(PROJECT_DIR)}")
+    print(f"saved: {out.relative_to(LESSON_DIR)}")
 
 
 if __name__ == "__main__":

@@ -3,8 +3,8 @@
 Loads the model once, does a warmup run, then times prefill and decode
 across several prompt lengths.
 
-    uv run scripts/bench.py
-    uv run scripts/bench.py --prompt-lengths 64 512 2048 --runs 5
+    uv run 00-foundations/01-first-model/bench.py
+    uv run 00-foundations/01-first-model/bench.py --prompt-lengths 64 512 2048 --runs 5
 """
 
 import argparse

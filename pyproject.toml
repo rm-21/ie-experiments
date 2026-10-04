@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["mlx-lm-run"]
+members = ["00-foundations"]
 
 [dependency-groups]
 dev = [
