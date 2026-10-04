@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="en" data-theme="blueprint" data-mode="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Answer me with HTML 0.4.6">
+<title>One prompt, end to end</title>
+<style>
+html[data-theme="blueprint"], html[data-theme="blueprint"][data-mode="light"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 0px;
+  --shadow: none;
+  --bw: 1.5px;
+  --head-font: var(--font-sans);
+  --bg: #f6f6f3;
+  --paper: #ffffff;
+  --ink: #16181d;
+  --ink-2: #4b5260;
+  --ink-3: #8b929e;
+  --line: #1d2026;
+  --line-2: #d6dae1;
+  --fill: #f3f5f8;
+  --accent: #1d5fbf;
+  --accent-bg: #e4ecf8;
+  --ok: #1d5fbf;
+  --ok-bg: #e4ecf8;
+  --err: #c62828;
+  --err-bg: #fbeaea;
+  --warn: #a8620a;
+  --warn-bg: #fdf3e2;
+  --head-bg: #16181d;
+  --head-fg: #ffffff;
+}
+html[data-theme="blueprint"][data-mode="dark"] {
+  --bg: #081322;
+  --paper: #0d1c31;
+  --ink: #e6edf7;
+  --ink-2: #a9b8cc;
+  --ink-3: #6b7f99;
+  --line: #c9d6e8;
+  --line-2: #23385a;
+  --fill: #12253f;
+  --accent: #6ea8ff;
+  --accent-bg: #16305a;
+  --ok: #6ea8ff;
+  --ok-bg: #16305a;
+  --err: #ff7070;
+  --err-bg: #3b1620;
+  --warn: #f0b14a;
+  --warn-bg: #3a2a10;
+  --head-bg: #e6edf7;
+  --head-fg: #081322;
+}
+@media (prefers-color-scheme: dark) {
+html[data-theme="blueprint"][data-mode="auto"] {
+  --bg: #081322;
+  --paper: #0d1c31;
+  --ink: #e6edf7;
+  --ink-2: #a9b8cc;
+  --ink-3: #6b7f99;
+  --line: #c9d6e8;
+  --line-2: #23385a;
+  --fill: #12253f;
+  --accent: #6ea8ff;
+  --accent-bg: #16305a;
+  --ok: #6ea8ff;
+  --ok-bg: #16305a;
+  --err: #ff7070;
+  --err-bg: #3b1620;
+  --warn: #f0b14a;
+  --warn-bg: #3a2a10;
+  --head-bg: #e6edf7;
+  --head-fg: #081322;
+}
+}
+
+html[data-theme="shadcn"], html[data-theme="shadcn"][data-mode="light"] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius: 8px;
+  --shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --bw: 1px;
+  --head-font: var(--font-sans);
+  --bg: #fafafa;
+  --paper: #ffffff;
+  --ink: #09090b;
+  --ink-2: #71717a;
+  --ink-3: #a1a1aa;
+  --line: #e4e4e7;
+  --line-2: #f0f0f2;
+  --fill: #f4f4f5;
+  --accent: #2563eb;
+  --accent-bg: #eff6ff;
+  --ok: #16a34a;
+  --ok-bg: #f0fdf4;
+  --err: #dc2626;
+  --err-bg: #fef2f2;
+  --warn: #d97706;
+  --warn-bg: #fffbeb;
+  --head-bg: #18181b;
+  --head-fg: #fafafa;
+}
+html[data-theme="shadcn"][data-mode="dark"] {
+  --bg: #09090b;
+  --paper: #121215;
+  --ink: #fafafa;
+  --ink-2: #a1a1aa;
+  --ink-3: #71717a;
+  --line: #27272a;
+  --line-2: #1c1c1f;
+  --fill: #18181b;
+  --accent: #60a5fa;
+  --accent-bg: #172554;
+  --ok: #4ade80;
+  --ok-bg: #052e16;
+  --err: #f87171;
+  --err-bg: #450a0a;
+  --warn: #fbbf24;
+  --warn-bg: #451a03;
+  --head-bg: #fafafa;
+  --head-fg: #18181b;
+}
+@media (prefers-color-scheme: dark) {
+html[data-theme="shadcn"][data-mode="auto"] {
+  --bg: #09090b;
+  --paper: #121215;
+  --ink: #fafafa;
+  --ink-2: #a1a1aa;
+  --ink-3: #71717a;
+  --line: #27272a;
+  --line-2: #1c1c1f;
+  --fill: #18181b;
+  --accent: #60a5fa;
+  --accent-bg: #172554;
+  --ok: #4ade80;
+  --ok-bg: #052e16;
+  --err: #f87171;
+  --err-bg: #450a0a;
+  --warn: #fbbf24;
+  --warn-bg: #451a03;
+  --head-bg: #fafafa;
+  --head-fg: #18181b;
+}
+}
+
+html[lang="ja"][data-theme][data-mode] {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans CJK JP", "Noto Sans JP", "PingFang SC", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+html[lang="ja"][data-theme="3b1b"][data-mode] {
+  --v-title-font: "CMU Serif", "Latin Modern Roman", "Iowan Old Style", "Palatino", "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif CJK JP", "Noto Serif JP", "Songti SC", serif;
+}
+
+/* Answer me with HTML base — 只引用主题变量，禁止写死颜色（主题 token 见 themes/index.js） */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 14px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+code, pre, kbd { font-family: var(--font-mono); }
+
+/* ── 工具栏 ─────────────────────────────── */
+.am-toolbar {
+  position: fixed; top: 12px; right: 12px; z-index: 10; display: flex; gap: 6px;
+}
+.am-btn {
+  font: 12px/1 var(--font-sans); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line-2); border-radius: var(--radius); padding: 7px 10px; cursor: pointer;
+}
+.am-btn:hover { border-color: var(--ink-3); }
+.am-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── 页头 ───────────────────────────────── */
+.am-head { margin: 0 0 20px; padding-right: 260px; }
+.am-head h1 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -0.01em; }
+.am-sub { margin: 4px 0 0; color: var(--ink-2); }
+.am-head-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.am-head-meta b { font-family: var(--font-mono); font-weight: 400; color: var(--ink-3); margin-right: 6px; }
+.am-intro { margin-top: 12px; max-width: 80ch; }
+
+/* ── sheet 图纸板 ────────────────────────── */
+.am-sheet { max-width: 1680px; margin: 0 auto; padding: 32px 28px 40px; }
+.am-frame { position: relative; }
+.am-grid {
+  display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 20px; align-items: start;
+}
+.am-ruler { display: none; }
+html[data-theme="blueprint"] .am-frame { border: 1px solid var(--line); padding: 30px; }
+html[data-theme="blueprint"] .am-frame::before {
+  content: ""; position: absolute; inset: 18px; border: 1px solid var(--line); pointer-events: none;
+}
+html[data-theme="blueprint"] .am-ruler {
+  display: flex; position: absolute; font: 10px/1 var(--font-mono); color: var(--ink-3);
+}
+.am-ruler span { flex: 1; display: flex; align-items: center; justify-content: center; }
+.am-ruler--top, .am-ruler--bottom { left: 18px; right: 18px; height: 18px; }
+.am-ruler--top { top: 0; }
+.am-ruler--bottom { bottom: 0; }
+.am-ruler--left, .am-ruler--right { top: 18px; bottom: 18px; width: 18px; flex-direction: column; }
+.am-ruler--left { left: 0; }
+.am-ruler--right { right: 0; }
+.am-ruler--top span + span, .am-ruler--bottom span + span { border-left: 1px solid var(--line); }
+.am-ruler--left span + span, .am-ruler--right span + span { border-top: 1px solid var(--line); }
+
+/* ── 面板 ───────────────────────────────── */
+.am-panel {
+  background: var(--paper); border: var(--bw) solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); min-width: 0; overflow: hidden;
+}
+.am-panel-head {
+  display: flex; align-items: stretch; gap: 0; border-bottom: var(--bw) solid var(--line); min-height: 34px;
+}
+.am-panel-id {
+  display: flex; align-items: center; justify-content: center; min-width: 34px; padding: 0 8px;
+  background: var(--head-bg); color: var(--head-fg); font-weight: 600; font-size: 14px;
+}
+html[data-theme="shadcn"] .am-panel-id { border-radius: 6px; min-width: 24px; height: 24px; margin: 9px 0 9px 14px; font-size: 12px; }
+html[data-theme="shadcn"] .am-panel-head { border-bottom-width: 1px; }
+.am-panel-head h2 { margin: 0; padding: 7px 12px; font-size: 15px; font-weight: 600; flex: 1; display: flex; align-items: center; }
+.am-panel-meta { align-self: center; padding: 0 12px; font: 11px/1.3 var(--font-mono); color: var(--ink-2); text-align: right; }
+.am-panel-body { padding: 14px 16px 16px; }
+.am-panel-body > * + * { margin-top: 12px; }
+
+/* ── Markdown 正文 ───────────────────────── */
+.am-md > :first-child { margin-top: 0; }
+.am-md > :last-child { margin-bottom: 0; }
+.am-md p { margin: 0 0 8px; }
+.am-md ul, .am-md ol { margin: 0 0 8px; padding-left: 20px; }
+.am-md li + li { margin-top: 3px; }
+.am-md h3, .am-md h4 { margin: 14px 0 6px; font-size: 13px; }
+.am-md a { color: var(--accent); }
+.am-md blockquote { margin: 0 0 8px; padding: 2px 12px; border-left: 3px solid var(--line-2); color: var(--ink-2); }
+.am-md :not(pre) > code { font-size: 0.9em; background: var(--fill); padding: 1px 5px; border-radius: 4px; }
+.am-md hr { border: 0; border-top: 1px solid var(--line-2); margin: 12px 0; }
+.am-md table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.am-md th {
+  text-align: left; font: 11px/1.3 var(--font-mono); color: var(--ink-2); font-weight: 400;
+  padding: 6px 10px; border-bottom: 1px solid var(--line-2);
+}
+.am-md td { padding: 7px 10px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+.am-md tbody tr:nth-child(even) td { background: var(--fill); }
+.am-table-wrap { overflow-x: auto; }
+.am-code {
+  margin: 0; padding: 12px 14px; background: var(--fill); border: 1px solid var(--line-2);
+  border-radius: var(--radius); overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+}
+
+/* ── 状态徽章 ok / no / warn ──────────────── */
+.am-status { white-space: nowrap; font-weight: 500; }
+.am-status--ok { color: var(--ok); }
+.am-status--no { color: var(--err); }
+.am-status--warn { color: var(--warn); }
+.am-status-icon { display: inline-block; width: 1.1em; font-weight: 700; }
+
+/* ── callout ─────────────────────────────── */
+.am-callout {
+  border: 1px solid var(--line-2); border-left: 3px solid var(--accent); background: var(--accent-bg);
+  padding: 10px 14px; border-radius: var(--radius);
+}
+.am-callout--ok { border-left-color: var(--ok); background: var(--ok-bg); }
+.am-callout--warn { border-left-color: var(--warn); background: var(--warn-bg); }
+.am-callout--err { border-left-color: var(--err); background: var(--err-bg); }
+.am-callout-title { font-weight: 600; margin-bottom: 4px; }
+
+/* ── kv 标题栏格 ─────────────────────────── */
+.am-kv {
+  display: grid; grid-template-columns: repeat(var(--kv-cols, 2), minmax(0, 1fr)); margin: 0;
+  border-top: var(--bw) solid var(--line); border-left: var(--bw) solid var(--line);
+}
+.am-kv-cell { border-right: var(--bw) solid var(--line); border-bottom: var(--bw) solid var(--line); padding: 6px 10px 8px; min-width: 0; }
+.am-kv-cell--wide { grid-column: 1 / -1; }
+.am-kv dt { font: 11px/1.4 var(--font-mono); color: var(--ink-2); }
+.am-kv dd { margin: 2px 0 0; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.am-kv-cell--wide dd { font-size: 17px; font-weight: 600; }
+html[data-theme="shadcn"] .am-kv { border-color: var(--line); border-radius: var(--radius); overflow: hidden; }
+
+/* ── timeline ────────────────────────────── */
+.am-timeline { list-style: none; margin: 0; padding: 0; }
+.am-timeline--h { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); padding-top: 4px; }
+.am-timeline--h li { position: relative; text-align: center; padding: 0 6px; }
+.am-timeline--h li::before {
+  content: ""; position: absolute; top: 31px; left: 0; right: 0; border-top: var(--bw) solid var(--line);
+}
+.am-timeline--h li:first-child::before { left: 50%; }
+.am-timeline--h li:last-child::before { right: 50%; }
+.am-tl-when { display: block; font-size: 15px; font-weight: 500; height: 24px; }
+.am-tl-dot {
+  position: relative; display: block; width: 11px; height: 11px; margin: 2px auto 8px;
+  border: var(--bw) solid var(--line); border-radius: 50%; background: var(--paper);
+}
+.am-tl-item--hi .am-tl-dot { background: var(--accent); border-color: var(--accent); }
+.am-tl-title { display: block; font-size: 12.5px; font-weight: 500; }
+.am-tl-text { display: block; font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.am-timeline--v li { position: relative; padding: 0 0 14px 22px; }
+.am-timeline--v li::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: -6px; border-left: var(--bw) solid var(--line-2); }
+.am-timeline--v li:last-child::before { display: none; }
+.am-timeline--v .am-tl-dot { position: absolute; left: 0; top: 4px; margin: 0; }
+.am-timeline--v .am-tl-when { display: inline; height: auto; font: 12px var(--font-mono); color: var(--ink-2); margin-right: 8px; }
+.am-timeline--v .am-tl-title { display: inline; font-size: 14px; }
+.am-timeline--v .am-tl-text { margin-top: 2px; }
+
+/* ── annot 句子标注 ──────────────────────── */
+.am-annot + .am-annot { border-top: 1px solid var(--line-2); padding-top: 12px; }
+.am-annot-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.am-annot-meta { font: 11px var(--font-mono); font-weight: 400; color: var(--ink-2); }
+.am-annot-scroll { overflow-x: auto; }
+.am-annot-line {
+  position: relative; display: inline-block; white-space: pre; font: 14px/1.6 var(--font-mono);
+  padding-bottom: calc(var(--rows, 0) * 17px + 14px);
+}
+.am-annot-line--wrap { display: block; white-space: normal; padding-bottom: 10px; }
+.am-annot-line--wrap .am-seg { white-space: nowrap; }
+.am-seg { position: relative; }
+.am-seg::after {
+  content: ""; position: absolute; left: 1px; right: 1px; top: calc(100% + 1px); height: 5px;
+  border: 1px solid var(--accent); border-top: 0;
+}
+.am-seg-n {
+  position: absolute; left: 0; top: calc(100% + 8px + var(--row, 0) * 17px);
+  font: 11px/16px var(--font-sans); color: var(--accent); white-space: nowrap;
+}
+.am-seg--err { color: var(--err); }
+.am-seg--err::after { border-color: var(--err); }
+.am-seg--err .am-seg-n { color: var(--err); }
+.am-annot-caption { font-size: 12px; color: var(--ink-2); }
+
+/* ── limits 限值条 ───────────────────────── */
+.am-lim + .am-lim { margin-top: 14px; }
+.am-lim-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 4px; }
+.am-lim-val { font: 12px var(--font-mono); color: var(--accent); white-space: nowrap; }
+.am-lim-track { position: relative; height: 12px; border: 1px solid var(--line-2); background: var(--fill); border-radius: calc(var(--radius) / 2); }
+.am-lim-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-bg); border-right: 1px solid var(--accent); }
+.am-lim-mark { position: absolute; top: -4px; bottom: -4px; border-left: 2px solid var(--accent); }
+.am-lim.is-over .am-lim-fill { background: var(--err-bg); border-right-color: var(--err); }
+.am-lim.is-over .am-lim-val { color: var(--err); }
+.am-lim-ticks { position: relative; height: 16px; font: 10px/16px var(--font-mono); color: var(--ink-3); }
+.am-lim-ticks span { position: absolute; transform: translateX(-50%); }
+.am-lim-ticks span:first-child { transform: none; }
+.am-lim-note { font-size: 11px; color: var(--ink-2); margin-left: 6px; }
+
+/* ── tree 结构树 ─────────────────────────── */
+.am-tree { font-size: 13px; }
+.am-tree-root { display: flex; justify-content: center; position: relative; padding-bottom: 18px; }
+.am-tree-root::after { content: ""; position: absolute; bottom: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }
+.am-tree-root--solo { padding-bottom: 12px; }
+.am-tree-root--solo::after { display: none; }
+.am-tree-box {
+  border: var(--bw) solid var(--line); background: var(--paper); padding: 6px 14px; text-align: center;
+  border-radius: var(--radius); font-weight: 600;
+}
+.am-tree-box small { display: block; font-weight: 400; color: var(--ink-2); font-size: 12px; }
+.am-tree-box--root { background: var(--accent-bg); font-size: 15px; padding: 8px 28px; }
+.am-tree-cols { display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); }
+.am-tree-col { position: relative; padding: 18px 8px 0; min-width: 0; }
+.am-tree-col::before { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: var(--bw) solid var(--line); }
+.am-tree-col:first-child::before { left: 50%; }
+.am-tree-col:last-child::before { right: 50%; }
+.am-tree-col::after { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: var(--bw) solid var(--line); }
+.am-tree-list, .am-tree-list ul { list-style: none; margin: 0; padding: 0; }
+.am-tree-col > .am-tree-list { margin: 8px 0 0 14px; }
+.am-tree-list ul { margin-left: 16px; }
+.am-tree-list li { position: relative; padding: 3px 0 3px 18px; }
+.am-tree-list li::before { content: ""; position: absolute; left: 0; top: 0.95em; width: 12px; border-top: 1px solid var(--ink-3); }
+.am-tree-list li::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1px solid var(--ink-3); }
+.am-tree-list li:last-child::after { bottom: auto; height: 0.95em; }
+.am-tree-tag { font: 11px var(--font-mono); color: var(--ink-3); margin-right: 4px; }
+.am-tree code { font: 12px var(--font-mono); }
+.am-tree-sub { display: block; font-size: 11.5px; color: var(--ink-2); }
+.am-tree-hi > .am-tree-label { color: var(--accent); font-weight: 600; }
+
+/* ── 图（flow / sequence）───────────────── */
+.am-diagram { margin: 0; overflow-x: auto; text-align: center; }
+.am-diagram svg { max-width: 100%; height: auto; font-family: var(--font-sans); }
+.am-diagram text { fill: var(--ink); font-size: 13px; }
+.am-node-shape { fill: var(--paper); stroke: var(--line); stroke-width: var(--bw); }
+.am-node--hi .am-node-shape { fill: var(--accent-bg); stroke: var(--accent); }
+.am-node--hi text { fill: var(--accent); font-weight: 600; }
+.am-edge { fill: none; stroke: var(--ink-2); stroke-width: 1.3; }
+.am-edge--dashed { stroke-dasharray: 5 4; }
+.am-arrow { fill: var(--ink-2); }
+.am-edge-label rect { fill: var(--paper); }
+.am-diagram .am-edge-label text { fill: var(--accent); font-size: 11.5px; }
+.am-cluster { fill: var(--fill); stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.am-diagram .am-cluster-label { fill: var(--ink-2); font: 11px var(--font-mono); }
+.am-lifeline { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 4 4; }
+.am-actor { fill: var(--paper); stroke: var(--line); stroke-width: var(--bw); }
+.am-note { fill: var(--warn-bg); stroke: var(--warn); stroke-width: 1; }
+.am-diagram .am-step { fill: var(--ink-3); font: 10px var(--font-mono); }
+
+/* ── doc 线性讲解 ────────────────────────── */
+.am-doc { max-width: 1120px; margin: 0 auto; padding: 40px 28px 64px; }
+.am-doc-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+.am-doc-layout--notoc { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
+.am-toc { position: sticky; top: 24px; font-size: 13px; }
+.am-toc a { display: block; color: var(--ink-2); text-decoration: none; padding: 4px 0 4px 10px; border-left: 2px solid var(--line-2); }
+.am-toc a:hover { color: var(--ink); border-left-color: var(--accent); }
+.am-doc-body > .am-panel + .am-panel { margin-top: 20px; }
+
+/* ── 响应式与打印 ─────────────────────────── */
+@media (max-width: 1100px) {
+  .am-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .am-grid > .am-panel { grid-column: auto !important; }
+  .am-grid > .am-panel.am-span-wide { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 760px) {
+  .am-sheet, .am-doc { padding: 56px 12px 24px; }
+  .am-head { padding-right: 0; }
+  .am-grid { grid-template-columns: minmax(0, 1fr); }
+  .am-grid > .am-panel.am-span-wide { grid-column: auto !important; }
+  html[data-theme="blueprint"] .am-frame { padding: 0; border: 0; }
+  html[data-theme="blueprint"] .am-frame::before, html[data-theme="blueprint"] .am-ruler { display: none; }
+  .am-doc-layout { grid-template-columns: minmax(0, 1fr); }
+  .am-toc { position: static; }
+  .am-timeline--h { grid-template-columns: minmax(0, 1fr); }
+  .am-tree-cols { grid-template-columns: minmax(0, 1fr); }
+}
+.am-colophon { text-align: center; padding: 0 0 28px; font: 11px var(--font-mono); color: var(--ink-3); }
+
+@media print {
+  .am-toolbar { display: none; }
+  body { background: var(--paper); }
+  .am-panel { break-inside: avoid; box-shadow: none; }
+}
+.am-panel--bare { border: 0; background: transparent; box-shadow: none; }
+.am-panel--bare > .am-panel-body { padding: 0; }
+.am-panel--bare .am-kv { background: var(--paper); }
+
+</style>
+</head>
+<body>
+<div class="am-toolbar">
+<button class="am-btn" type="button" data-am="theme" data-labels="{&quot;blueprint&quot;:&quot;Theme: Blueprint&quot;,&quot;shadcn&quot;:&quot;Theme: Cards&quot;}">Theme: Blueprint</button>
+<button class="am-btn" type="button" data-am="mode" data-labels="{&quot;auto&quot;:&quot;Mode: Auto&quot;,&quot;light&quot;:&quot;Mode: Light&quot;,&quot;dark&quot;:&quot;Mode: Dark&quot;}">Mode: Auto</button>
+<button class="am-btn" type="button" data-am="copy" data-done="Copied ✓">Copy source</button>
+</div>
+<main class="am-doc">
+<header class="am-head"><h1>One prompt, end to end</h1><p class="am-sub">From text to tokens to matmuls to the next word, then where prefill and arithmetic intensity fit</p><div class="am-head-meta"><span><b>model</b>Llama 3.2 1B Instruct 4-bit</span><span><b>source</b>real run on your M4 Pro</span></div><div class="am-intro am-md"><div class="am-md"><p>Prefill and arithmetic intensity are two different kinds of idea. Prefill is a <strong>phase</strong>: the first pass, where all prompt tokens go in. Arithmetic intensity is a <strong>score</strong> you can give any matmul: FLOPs per byte moved. Prefill gets a high score because it puts many rows into each matmul.</p>
+</div></div></header>
+<div class="am-doc-layout">
+<nav class="am-toc" aria-label="目录"><a href="#panel-A">A · The two ideas, side by side</a><a href="#panel-B">B · Step 1: text becomes token IDs</a><a href="#panel-C">C · Step 2: each ID becomes a row of 2048 numbers</a><a href="#panel-D">D · Step 3: what a layer does</a><a href="#panel-E">E · Step 4: the last row becomes a guess for the next token</a><a href="#panel-F">F · Step 5: decode repeats, one token per pass</a><a href="#panel-G">G · Where prefill and decode fit</a><a href="#panel-H">H · Where arithmetic intensity fits</a><a href="#panel-I">I · The whole chain in one line</a></nav><div class="am-doc-body">
+<section class="am-panel" id="panel-A">
+<header class="am-panel-head"><span class="am-panel-id">A</span><h2>The two ideas, side by side</h2></header>
+<div class="am-panel-body"><div class="am-md"><div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>Kind of thing</th>
+<th>Question it answers</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prefill / decode</td>
+<td>a phase of generation</td>
+<td>Which tokens go into this pass?</td>
+<td>tokens per pass</td>
+</tr>
+<tr>
+<td>Arithmetic intensity</td>
+<td>a property of one matmul</td>
+<td>How much math do I get per byte I fetch?</td>
+<td>FLOPs / byte</td>
+</tr>
+<tr>
+<td>Rows (M)</td>
+<td>the link between them</td>
+<td>How many tokens share one weight fetch?</td>
+<td>rows</td>
+</tr>
+</tbody></table></div>
+</div>
+<div class="am-callout am-callout--info" role="note"><div class="am-callout-title">How they connect</div><div class="am-callout-body am-md"><p>The phase decides M. M decides the intensity. Prefill has a big M, so its intensity is high. Decode has M = 1, so its intensity is about 1.</p>
+</div></div></div>
+</section>
+<section class="am-panel" id="panel-B">
+<header class="am-panel-head"><span class="am-panel-id">B</span><h2>Step 1: text becomes token IDs</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>The prompt is <code>The capital of France is</code>. The tokenizer splits it into 6 tokens. These are the real IDs from your model.</p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Position</th>
+<th>Token</th>
+<th>ID</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>`&lt;</td>
+<td>begin_of_text</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>The</code></td>
+<td>791</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code> capital</code></td>
+<td>6864</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code> of</code></td>
+<td>315</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code> France</code></td>
+<td>9822</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code> is</code></td>
+<td>374</td>
+</tr>
+</tbody></table></div>
+<p>An ID is only a lookup number. It has no meaning yet.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-C">
+<header class="am-panel-head"><span class="am-panel-id">C</span><h2>Step 2: each ID becomes a row of 2048 numbers</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>The model has a table with one row per vocabulary entry. It looks up each ID and copies out that row. The result is <code>x</code>, a matrix of shape <strong>6 × 2048</strong>.</p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Row</th>
+<th>Token</th>
+<th>The row: 2048 numbers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td><code>&lt;|begin_of_text|&gt;</code></td>
+<td>[ … 2048 numbers … ]</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>The</code></td>
+<td>[ … 2048 numbers … ]</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code> capital</code></td>
+<td>[-0.0327, 0.0327, 0.0245, 0.0573, … 2044 more]</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code> of</code></td>
+<td>[ … 2048 numbers … ]</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code> France</code></td>
+<td>[ … 2048 numbers … ]</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code> is</code></td>
+<td>[ … 2048 numbers … ]</td>
+</tr>
+</tbody></table></div>
+<ul>
+<li><strong>A row is one token.</strong> Your prompt sets the number of rows: 6 here, 234 for your long prompt.</li>
+<li><strong>2048 is the width of every row.</strong> The model sets it. It never changes, because the weights are 2048 × 2048.</li>
+<li>The numbers for <code> capital</code> are its real first 4 values.</li>
+</ul>
+</div></div>
+</section>
+<section class="am-panel" id="panel-D">
+<header class="am-panel-head"><span class="am-panel-id">D</span><h2>Step 3: what a layer does</h2></header>
+<div class="am-panel-body"><div class="am-md"><p><strong>A layer is a few weight matrices. Each one does the same thing: rows @ W.</strong> That is the matmul from <code>la.py</code>.</p>
+<p><strong>A tiny example you can check by hand.</strong> Pretend the width is 3, not 2048, and there are 2 tokens.</p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>x (2 rows × 3)</th>
+<th>@ W (3 × 3)</th>
+<th>= new rows (2 × 3)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code> France</code></td>
+<td>[1, 0, 2]</td>
+<td>[1, 2, 0]</td>
+<td>[3, 2, 2]</td>
+</tr>
+<tr>
+<td><code> is</code></td>
+<td>[0, 1, 1]</td>
+<td>[0, 1, 1]</td>
+<td>[1, 1, 2]</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>[1, 0, 1]</td>
+<td></td>
+</tr>
+</tbody></table></div>
+<ul>
+<li>Each token&#39;s row goes in. A new row for the same token comes out.</li>
+<li>First number for <code> France</code>: 1·1 + 0·0 + 2·1 = 3.</li>
+<li>W is the same for both rows. The chip fetches it once and uses it for every row.</li>
+</ul>
+<p><strong>A real layer</strong> does this 7 times, with bigger W matrices:</p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Matmul</th>
+<th>Rows in</th>
+<th>W</th>
+<th>Rows out</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4 for attention</td>
+<td>6</td>
+<td>2048 × 2048 (or × 512)</td>
+<td>6</td>
+</tr>
+<tr>
+<td>3 for the MLP</td>
+<td>6</td>
+<td>2048 × 8192 (or 8192 × 2048)</td>
+<td>6</td>
+</tr>
+</tbody></table></div>
+<ul>
+<li><strong>Rows in = rows out.</strong> 6 tokens go in, 6 come out, at every step.</li>
+<li>One small extra step (attention) lets rows look at each other. That is how <code> is</code> learns it is about <code> France</code>. Later phases cover it.</li>
+<li>16 layers × 7 matrices = <strong>112 weight fetches per pass</strong>. Keep this number. Panel H uses it.</li>
+</ul>
+<p><strong>Who defines a layer</strong></p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Which steps, in which order</td>
+<td>Meta designed it. mlx-lm runs it (<code>llama.py</code>).</td>
+</tr>
+<tr>
+<td>The sizes: 2048, 8192, 16 layers</td>
+<td>Meta, in <code>config.json</code>.</td>
+</tr>
+<tr>
+<td>The numbers inside every W</td>
+<td>Training learned them. They are in <code>model.safetensors</code>.</td>
+</tr>
+<tr>
+<td>The number of rows</td>
+<td>You, through your prompt.</td>
+</tr>
+</tbody></table></div>
+</div></div>
+</section>
+<section class="am-panel" id="panel-E">
+<header class="am-panel-head"><span class="am-panel-id">E</span><h2>Step 4: the last row becomes a guess for the next token</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>The model uses only the <strong>last row</strong> (for <code> is</code>) to predict. It multiplies that row into 128,256 scores, one per vocabulary entry. Softmax turns the scores into probabilities. These are the real top 5:</p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Next token</th>
+<th>Probability</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code> Paris</code></td>
+<td>0.698</td>
+</tr>
+<tr>
+<td><code>...</code></td>
+<td>0.031</td>
+</tr>
+<tr>
+<td><code>:</code></td>
+<td>0.017</td>
+</tr>
+<tr>
+<td><code> what</code></td>
+<td>0.016</td>
+</tr>
+<tr>
+<td><code>:\n</code></td>
+<td>0.016</td>
+</tr>
+</tbody></table></div>
+<p>The model picks <code> Paris</code>. That is answer token 1.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-F">
+<header class="am-panel-head"><span class="am-panel-id">F</span><h2>Step 5: decode repeats, one token per pass</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>To get the next token, feed <code> Paris</code> back in. Now the input is <strong>1 row</strong>. The model keeps the earlier rows&#39; attention data in the KV cache, so it does not recompute them.</p>
+</div>
+<figure class="am-diagram am-seq"><svg viewBox="0 0 519 370" width="519" height="370" role="img" aria-label="时序图：Prompt、Model、Output" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><line class="am-lifeline" x1="54" y1="42" x2="54" y2="366"/><g data-key="Prompt"><rect class="am-actor" x="12" y="8" width="84" height="34" rx="2"/><text x="54" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Prompt</text></g><line class="am-lifeline" x1="279.1" y1="42" x2="279.1" y2="366"/><g data-key="Model"><rect class="am-actor" x="237.1" y="8" width="84" height="34" rx="2"/><text x="279.1" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Model</text></g><line class="am-lifeline" x1="464.7" y1="42" x2="464.7" y2="366"/><g data-key="Output"><rect class="am-actor" x="422.7" y="8" width="84" height="34" rx="2"/><text x="464.7" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">Output</text></g><g data-step="0"><text x="166.6" y="70" text-anchor="middle">pass 1 — 6 rows (whole prompt)</text><path class="am-edge" d="M54,80 L277.1,80" marker-end="url(#am1-arrow)"/><text class="am-step" x="60" y="74" text-anchor="start">1</text></g><g data-step="1"><text x="371.9" y="110" text-anchor="middle">&quot; Paris&quot;</text><path class="am-edge am-edge--dashed" d="M279.1,120 L462.7,120" marker-end="url(#am1-arrow)"/><text class="am-step" x="285.1" y="114" text-anchor="start">2</text></g><g data-step="2"><text x="371.9" y="150" text-anchor="middle">pass 2 — 1 row (&quot; Paris&quot;)</text><path class="am-edge" d="M464.7,160 L281.1,160" marker-end="url(#am1-arrow)"/><text class="am-step" x="458.7" y="154" text-anchor="end">3</text></g><g data-step="3"><text x="371.9" y="190" text-anchor="middle">&quot;.&quot;</text><path class="am-edge am-edge--dashed" d="M279.1,200 L462.7,200" marker-end="url(#am1-arrow)"/><text class="am-step" x="285.1" y="194" text-anchor="start">4</text></g><g data-step="4"><text x="371.9" y="230" text-anchor="middle">pass 3 — 1 row (&quot;.&quot;)</text><path class="am-edge" d="M464.7,240 L281.1,240" marker-end="url(#am1-arrow)"/><text class="am-step" x="458.7" y="234" text-anchor="end">5</text></g><g data-step="5"><text x="371.9" y="270" text-anchor="middle">&quot;\n The&quot;</text><path class="am-edge am-edge--dashed" d="M279.1,280 L462.7,280" marker-end="url(#am1-arrow)"/><text class="am-step" x="285.1" y="274" text-anchor="start">6</text></g><g data-step="6"><rect class="am-note" x="178.1" y="304" width="201.9" height="44" rx="2"/><text x="279.1" y="318" text-anchor="middle" dominant-baseline="central" font-size="12">each pass runs all 16 layers and</text><text x="279.1" y="334" text-anchor="middle" dominant-baseline="central" font-size="12">fetches all weights again</text></g></svg></figure>
+<div class="am-md"><p>The real output for 6 passes: <code> Paris.</code> then a new line, then <code>The capital of France</code>.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-G">
+<header class="am-panel-head"><span class="am-panel-id">G</span><h2>Where prefill and decode fit</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>Prefill and decode are only <strong>names for passes</strong>.</p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Pass</th>
+<th>Name</th>
+<th>Rows in (M)</th>
+<th>Why that many rows</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>prefill</td>
+<td>6</td>
+<td>You wrote the whole prompt already, so all its tokens go in together.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>decode</td>
+<td>1</td>
+<td><code> Paris</code> did not exist until pass 1 finished.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>decode</td>
+<td>1</td>
+<td><code>.</code> did not exist until pass 2 finished.</td>
+</tr>
+<tr>
+<td>…</td>
+<td>decode</td>
+<td>1</td>
+<td>Each token waits for the one before it.</td>
+</tr>
+</tbody></table></div>
+<p>Prefill is a phase with many rows. Decode is a phase with one row. Nothing else changes: same model, same 16 layers, same weights.</p>
+</div></div>
+</section>
+<section class="am-panel" id="panel-H">
+<header class="am-panel-head"><span class="am-panel-id">H</span><h2>Where arithmetic intensity fits</h2></header>
+<div class="am-panel-body"><div class="am-md"><p>Now score <strong>one matmul</strong> inside each pass: <code>x @ W_q</code>, with W_q = 2048 × 2048 at 2 bytes per number.</p>
+<div class="am-table-wrap"><table>
+<thead>
+<tr>
+<th>Pass</th>
+<th>M</th>
+<th>FLOPs (2·M·2048·2048)</th>
+<th>Bytes (x + W_q + y)</th>
+<th>Intensity</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 (prefill)</td>
+<td>6</td>
+<td>50.3 M</td>
+<td>8.44 M</td>
+<td>6.0 FLOPs/byte</td>
+</tr>
+<tr>
+<td>2 (decode)</td>
+<td>1</td>
+<td>8.4 M</td>
+<td>8.40 M</td>
+<td>1.0 FLOPs/byte</td>
+</tr>
+<tr>
+<td>your long prompt (prefill)</td>
+<td>234</td>
+<td>1.96 G</td>
+<td>10.31 M</td>
+<td>190 FLOPs/byte</td>
+</tr>
+</tbody></table></div>
+<ul>
+<li>W_q costs 8.39 MB in every pass, for any M.</li>
+<li>More rows means more math on the same fetched weights.</li>
+<li>A full pass repeats this for all 112 weight matrices from panel D. Prefill shares each fetch across all prompt rows. Decode uses each fetch for 1 row.</li>
+<li>So intensity is not a phase. It is a measurement. Prefill scores high <strong>because</strong> it brings many rows.</li>
+</ul>
+</div>
+<div class="am-callout am-callout--warn" role="note"><div class="am-callout-title">Simplification</div><div class="am-callout-body am-md"><p>The table uses 2 bytes per weight so the numbers stay simple. Your model stores weights in 4 bits, so the real W_q is about 4 times smaller. The pattern is the same.</p>
+</div></div></div>
+</section>
+<section class="am-panel" id="panel-I">
+<header class="am-panel-head"><span class="am-panel-id">I</span><h2>The whole chain in one line</h2></header>
+<div class="am-panel-body"><figure class="am-diagram am-flow"><svg viewBox="0 0 793 80" width="793" height="80" role="img" aria-label="流程图：Phase: prefill or decode、Rows per pass: M、Arithmetic intensity、Speed: compute-bound or memory-bound" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am2-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M186.3,40 L197.8,40 Q209.3,40 220.8,40 L232.3,40" marker-end="url(#am2-arrow)"/></g><g data-step="0"><path class="am-edge" d="M369.8,40 L381.3,40 Q392.8,40 404.3,40 L415.8,40" marker-end="url(#am2-arrow)"/></g><g data-step="0"><path class="am-edge" d="M563.4,40 L574.9,40 Q586.4,40 597.9,40 L609.4,40" marker-end="url(#am2-arrow)"/></g></g><g><g class="am-node am-node--rect" data-key="Phase: prefill or decode" data-step="0"><rect class="am-node-shape" x="14" y="22.5" width="172.3" height="35" rx="3"/><text x="100.2" y="40" text-anchor="middle" dominant-baseline="central">Phase: prefill or decode</text></g><g class="am-node am-node--rect" data-key="Rows per pass: M" data-step="0"><rect class="am-node-shape" x="232.3" y="22.5" width="137.5" height="35" rx="3"/><text x="301" y="40" text-anchor="middle" dominant-baseline="central">Rows per pass: M</text></g><g class="am-node am-node--rect" data-key="Arithmetic intensity" data-step="0"><rect class="am-node-shape" x="415.8" y="22.5" width="147.6" height="35" rx="3"/><text x="489.6" y="40" text-anchor="middle" dominant-baseline="central">Arithmetic intensity</text></g><g class="am-node am-node--rect" data-key="Speed: compute-bound or memory-bound" data-step="0"><rect class="am-node-shape" x="609.4" y="14" width="169.4" height="52" rx="3"/><text x="694.1" y="31.5" text-anchor="middle" dominant-baseline="central">Speed: compute-bound</text><text x="694.1" y="48.5" text-anchor="middle" dominant-baseline="central">or memory-bound</text></g></g></svg></figure>
+<div class="am-md"><ul>
+<li><strong>Phase</strong> decides how many tokens are ready to go in.</li>
+<li><strong>M</strong> is that number of rows.</li>
+<li><strong>Intensity</strong> is FLOPs per byte for a matmul with M rows.</li>
+<li><strong>Speed</strong> follows from intensity. This is why your prefill ran at 2034 tok/s and decode at 257 tok/s.</li>
+</ul>
+</div></div>
+</section>
+</div>
+</div>
+</main>
+<footer class="am-colophon">Generated by Answer me with HTML 0.4.6 · 2026-10-04 14:58</footer>
+<textarea id="am-source" hidden readonly aria-hidden="true">---
+title: One prompt, end to end
+subtitle: From text to tokens to matmuls to the next word, then where prefill and arithmetic intensity fit
+model: Llama 3.2 1B Instruct 4-bit
+source: real run on your M4 Pro
+lang: en
+---
+Prefill and arithmetic intensity are two different kinds of idea. Prefill is a **phase**: the first pass, where all prompt tokens go in. Arithmetic intensity is a **score** you can give any matmul: FLOPs per byte moved. Prefill gets a high score because it puts many rows into each matmul.
+
+## A The two ideas, side by side
+| Idea | Kind of thing | Question it answers | Unit |
+|---|---|---|---|
+| Prefill / decode | a phase of generation | Which tokens go into this pass? | tokens per pass |
+| Arithmetic intensity | a property of one matmul | How much math do I get per byte I fetch? | FLOPs / byte |
+| Rows (M) | the link between them | How many tokens share one weight fetch? | rows |
+
+```callout info How they connect
+The phase decides M. M decides the intensity. Prefill has a big M, so its intensity is high. Decode has M = 1, so its intensity is about 1.
+```
+
+## B Step 1: text becomes token IDs
+The prompt is `The capital of France is`. The tokenizer splits it into 6 tokens. These are the real IDs from your model.
+
+| Position | Token | ID |
+|---|---|---|
+| 0 | `&lt;|begin_of_text|&gt;` | 128000 |
+| 1 | `The` | 791 |
+| 2 | ` capital` | 6864 |
+| 3 | ` of` | 315 |
+| 4 | ` France` | 9822 |
+| 5 | ` is` | 374 |
+
+An ID is only a lookup number. It has no meaning yet.
+
+## C Step 2: each ID becomes a row of 2048 numbers
+The model has a table with one row per vocabulary entry. It looks up each ID and copies out that row. The result is `x`, a matrix of shape **6 × 2048**.
+
+| Row | Token | The row: 2048 numbers |
+|---|---|---|
+| 0 | `&lt;\|begin_of_text\|&gt;` | [ … 2048 numbers … ] |
+| 1 | `The` | [ … 2048 numbers … ] |
+| 2 | ` capital` | [-0.0327, 0.0327, 0.0245, 0.0573, … 2044 more] |
+| 3 | ` of` | [ … 2048 numbers … ] |
+| 4 | ` France` | [ … 2048 numbers … ] |
+| 5 | ` is` | [ … 2048 numbers … ] |
+
+- **A row is one token.** Your prompt sets the number of rows: 6 here, 234 for your long prompt.
+- **2048 is the width of every row.** The model sets it. It never changes, because the weights are 2048 × 2048.
+- The numbers for ` capital` are its real first 4 values.
+## D Step 3: what a layer does
+**A layer is a few weight matrices. Each one does the same thing: rows @ W.** That is the matmul from `la.py`.
+
+**A tiny example you can check by hand.** Pretend the width is 3, not 2048, and there are 2 tokens.
+
+| | x (2 rows × 3) | @ W (3 × 3) | = new rows (2 × 3) |
+|---|---|---|---|
+| ` France` | [1, 0, 2] | [1, 2, 0] | [3, 2, 2] |
+| ` is` | [0, 1, 1] | [0, 1, 1] | [1, 1, 2] |
+| | | [1, 0, 1] | |
+
+- Each token&#39;s row goes in. A new row for the same token comes out.
+- First number for ` France`: 1·1 + 0·0 + 2·1 = 3.
+- W is the same for both rows. The chip fetches it once and uses it for every row.
+
+**A real layer** does this 7 times, with bigger W matrices:
+
+| Matmul | Rows in | W | Rows out |
+|---|---|---|---|
+| 4 for attention | 6 | 2048 × 2048 (or × 512) | 6 |
+| 3 for the MLP | 6 | 2048 × 8192 (or 8192 × 2048) | 6 |
+
+- **Rows in = rows out.** 6 tokens go in, 6 come out, at every step.
+- One small extra step (attention) lets rows look at each other. That is how ` is` learns it is about ` France`. Later phases cover it.
+- 16 layers × 7 matrices = **112 weight fetches per pass**. Keep this number. Panel H uses it.
+
+**Who defines a layer**
+
+| What | Who |
+|---|---|
+| Which steps, in which order | Meta designed it. mlx-lm runs it (`llama.py`). |
+| The sizes: 2048, 8192, 16 layers | Meta, in `config.json`. |
+| The numbers inside every W | Training learned them. They are in `model.safetensors`. |
+| The number of rows | You, through your prompt. |
+
+## E Step 4: the last row becomes a guess for the next token
+The model uses only the **last row** (for ` is`) to predict. It multiplies that row into 128,256 scores, one per vocabulary entry. Softmax turns the scores into probabilities. These are the real top 5:
+
+| Next token | Probability |
+|---|---|
+| ` Paris` | 0.698 |
+| `...` | 0.031 |
+| `:` | 0.017 |
+| ` what` | 0.016 |
+| `:\n` | 0.016 |
+
+The model picks ` Paris`. That is answer token 1.
+## F Step 5: decode repeats, one token per pass
+To get the next token, feed ` Paris` back in. Now the input is **1 row**. The model keeps the earlier rows&#39; attention data in the KV cache, so it does not recompute them.
+
+```sequence num
+participants: Prompt, Model, Output
+Prompt -&gt; Model: pass 1 — 6 rows (whole prompt)
+Model --&gt; Output: &quot; Paris&quot;
+Output -&gt; Model: pass 2 — 1 row (&quot; Paris&quot;)
+Model --&gt; Output: &quot;.&quot;
+Output -&gt; Model: pass 3 — 1 row (&quot;.&quot;)
+Model --&gt; Output: &quot;\n The&quot;
+note Model: each pass runs all 16 layers and fetches all weights again
+```
+
+The real output for 6 passes: ` Paris.` then a new line, then `The capital of France`.
+
+## G Where prefill and decode fit
+Prefill and decode are only **names for passes**.
+
+| Pass | Name | Rows in (M) | Why that many rows |
+|---|---|---|---|
+| 1 | prefill | 6 | You wrote the whole prompt already, so all its tokens go in together. |
+| 2 | decode | 1 | ` Paris` did not exist until pass 1 finished. |
+| 3 | decode | 1 | `.` did not exist until pass 2 finished. |
+| … | decode | 1 | Each token waits for the one before it. |
+
+Prefill is a phase with many rows. Decode is a phase with one row. Nothing else changes: same model, same 16 layers, same weights.
+## H Where arithmetic intensity fits
+Now score **one matmul** inside each pass: `x @ W_q`, with W_q = 2048 × 2048 at 2 bytes per number.
+
+| Pass | M | FLOPs (2·M·2048·2048) | Bytes (x + W_q + y) | Intensity |
+|---|---|---|---|---|
+| 1 (prefill) | 6 | 50.3 M | 8.44 M | 6.0 FLOPs/byte |
+| 2 (decode) | 1 | 8.4 M | 8.40 M | 1.0 FLOPs/byte |
+| your long prompt (prefill) | 234 | 1.96 G | 10.31 M | 190 FLOPs/byte |
+
+- W_q costs 8.39 MB in every pass, for any M.
+- More rows means more math on the same fetched weights.
+- A full pass repeats this for all 112 weight matrices from panel D. Prefill shares each fetch across all prompt rows. Decode uses each fetch for 1 row.
+- So intensity is not a phase. It is a measurement. Prefill scores high **because** it brings many rows.
+
+```callout warn Simplification
+The table uses 2 bytes per weight so the numbers stay simple. Your model stores weights in 4 bits, so the real W_q is about 4 times smaller. The pattern is the same.
+```
+## I The whole chain in one line
+```flow LR
+[Phase: prefill or decode] -&gt; [Rows per pass: M] -&gt; [Arithmetic intensity] -&gt; [Speed: compute-bound or memory-bound]
+```
+
+- **Phase** decides how many tokens are ready to go in.
+- **M** is that number of rows.
+- **Intensity** is FLOPs per byte for a matmul with M rows.
+- **Speed** follows from intensity. This is why your prefill ran at 2034 tok/s and decode at 257 tok/s.</textarea>
+<script>
+(() => {
+  const root = document.documentElement;
+  const cycle = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
+  const label = (btn, value) => {
+    const map = JSON.parse(btn.dataset.labels || '{}');
+    btn.textContent = map[value] || value;
+  };
+  const bind = (name, attr, values) => {
+    const btn = document.querySelector(`[data-am="${name}"]`);
+    if (!btn) return;
+    label(btn, root.getAttribute(attr));
+    btn.addEventListener('click', () => {
+      const next = cycle(values, root.getAttribute(attr));
+      root.setAttribute(attr, next);
+      label(btn, next);
+    });
+  };
+  bind('theme', 'data-theme', ['blueprint', 'shadcn']);
+  bind('mode', 'data-mode', ['auto', 'light', 'dark']);
+
+  const copyBtn = document.querySelector('[data-am="copy"]');
+  copyBtn?.addEventListener('click', async () => {
+    const nodes = document.querySelectorAll('#am-source');
+    const text = nodes[nodes.length - 1]?.value ?? '';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = Object.assign(document.createElement('textarea'), { value: text });
+      document.body.append(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    const original = copyBtn.textContent;
+    copyBtn.textContent = copyBtn.dataset.done;
+    setTimeout(() => { copyBtn.textContent = original; }, 1400);
+  });
+})();
+</script>
+</body>
+</html>

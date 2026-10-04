@@ -9,6 +9,7 @@ requires-python = ">=3.14"
 dependencies = [
     "huggingface-hub>=1.33.0",
     "mlx-lm>=0.32.0",
+    "numpy>=2.5.3",
 ]
 
 [build-system]

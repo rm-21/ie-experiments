@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batched Matmul Stepper</title>
+<style>
+  /* Layout: scenario picker, shape header, x-stack @ w-stack = y-stack, readout, rule table. */
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --fg: #1d2330; --muted: #6b7385; --line: #d6dae3;
+    --row: #2f6fde; --col: #d9822b; --out: #1f9d6b; --cell: #eef0f4; --bad: #d14343;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171d; --panel: #1c2028; --fg: #e6e9ef; --muted: #9aa2b3; --line: #2e3442;
+      --row: #5b93f5; --col: #f0a052; --out: #3cc48f; --cell: #252a35; --bad: #f06a6a; color-scheme: dark; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 18px; }
+  h1 { margin: 0; font-size: 1.4rem; }
+  p { margin: 0; color: var(--muted); max-width: 72ch; }
+  code, .mono { font-family: var(--mono); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tab { font-family: var(--mono); font-size: .85rem; }
+  .tab .tag { margin-left: 6px; font-weight: 700; }
+  .tab[aria-pressed="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+  .ok { color: var(--out); } .bad { color: var(--bad); }
+
+  .shapes { font-family: var(--mono); font-size: 1.02rem; display: grid; gap: 6px; }
+  .shapes .why { font-family: var(--sans); color: var(--muted); font-size: .95rem; }
+
+  .stage { display: flex; align-items: center; gap: 18px; overflow-x: auto; }
+  .op { font-size: 1.6rem; color: var(--muted); font-family: var(--mono); }
+  .stack { display: grid; gap: 14px; justify-items: start; }
+  .mat { display: grid; gap: 6px; justify-items: start; transition: opacity .25s; }
+  .mat.dim { opacity: .3; }
+  .mat.err .grid { outline: 2px dashed var(--bad); outline-offset: 4px; border-radius: 6px; }
+  .label { font-family: var(--mono); font-size: .82rem; color: var(--muted); white-space: nowrap; }
+  .label.strong { color: var(--fg); }
+  .grid { display: grid; gap: 4px; }
+  .c { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 6px;
+       background: var(--cell); font-family: var(--mono); font-size: .85rem; transition: background .2s, color .2s; }
+  .c.row { background: var(--row); color: #fff; }
+  .c.col { background: var(--col); color: #fff; }
+  .c.miss { background: var(--bad); color: #fff; }
+  .c.done { background: color-mix(in srgb, var(--out) 30%, var(--cell)); }
+  .c.now { background: var(--out); color: #fff; }
+  .c.empty { color: transparent; }
+  .errbox { font-family: var(--mono); color: var(--bad); border: 2px dashed var(--bad); border-radius: 8px;
+            padding: 14px; max-width: 26ch; white-space: normal; }
+
+  .readout { font-family: var(--mono); min-height: 3em; overflow-x: auto; white-space: nowrap; }
+  .readout .r { color: var(--row); font-weight: 600; } .readout .k { color: var(--col); font-weight: 600; }
+  .readout .o { color: var(--out); font-weight: 700; } .readout .x { color: var(--bad); font-weight: 700; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button, select { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line);
+                   background: var(--panel); color: var(--fg); cursor: pointer; }
+  button:focus-visible, select:focus-visible { outline: 2px solid var(--row); outline-offset: 2px; }
+  label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+
+  .rules { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: 6px 14px 6px 0; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  td.mono { white-space: nowrap; }
+  pre { margin: 0; font-family: var(--mono); font-size: .88rem; overflow-x: auto; }
+  .cost { display: grid; gap: 14px; }
+  .cost h2 { margin: 0; font-size: 1.05rem; }
+  .terms { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .9rem; color: var(--muted); }
+  .terms b { color: var(--fg); font-family: var(--mono); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .kpi { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
+  .kpi .k { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .kpi .v { font-family: var(--mono); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .kpi .how { font-family: var(--mono); font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+  .bar { display: flex; height: 22px; border-radius: 5px; overflow: hidden; background: var(--cell); }
+  .bar span { display: grid; place-items: center; font-family: var(--mono); font-size: .72rem; color: #fff;
+              overflow: hidden; white-space: nowrap; transition: flex-grow .3s; min-width: 0; }
+  .bx { background: var(--row); } .bw { background: var(--col); } .by { background: var(--out); }
+  .slider { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .slider input { width: min(360px, 100%); }
+  .verdict { font-weight: 600; }
+  .sect { margin: 18px 0 0; font-size: 1.25rem; }
+  .pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .pick button[aria-pressed="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .85rem; color: var(--muted); }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+  .tl { display: grid; grid-template-columns: 70px 1fr; gap: 8px 10px; align-items: center; font-size: .85rem; }
+  .tl .lane { display: flex; height: 26px; border-radius: 5px; overflow: hidden; background: var(--cell); min-width: 0; }
+  .tl .lane span { display: grid; place-items: center; font-family: var(--mono); font-size: .72rem; color: #fff; white-space: nowrap; overflow: hidden; min-width: 0; }
+  .tl .row { display: contents; }
+  .tl .row > * { cursor: pointer; transition: opacity .2s; }
+  .tl .row.off > * { opacity: .4; }
+  .tl .row.on .mono { font-weight: 700; }
+  .tl .lane { position: relative; }
+  .playhead { position: absolute; top: -2px; bottom: -2px; width: 3px; background: var(--fg); border-radius: 2px; pointer-events: none; }
+  .s-start { background: var(--muted); } .s-pre { background: var(--row); } .s-dec { background: var(--col); }
+  .tokens { display: flex; flex-wrap: wrap; gap: 3px; min-height: 20px; }
+  .tok { width: 9px; height: 9px; border-radius: 2px; background: var(--cell); border: 1px solid var(--line); }
+  .tok.p { background: var(--row); border-color: var(--row); }
+  .tok.g { background: var(--col); border-color: var(--col); }
+  .tok.pa { background: color-mix(in srgb, var(--row) 45%, var(--cell)); border-color: var(--row); }
+  .layers { display: flex; flex-wrap: wrap; gap: 3px; }
+  .lay { width: 26px; height: 14px; border-radius: 3px; background: var(--cell); border: 1px solid var(--line);
+         font-family: var(--mono); font-size: .6rem; display: grid; place-items: center; color: var(--muted); }
+  .lay.donep { background: color-mix(in srgb, var(--row) 45%, var(--cell)); }
+  .lay.nowp { background: var(--row); color: #fff; border-color: var(--row); }
+  .lay.doned { background: color-mix(in srgb, var(--col) 45%, var(--cell)); }
+  .lay.nowd { background: var(--col); color: #fff; border-color: var(--col); }
+  .weights { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .wblock { width: 64px; height: 44px; border-radius: 6px; background: var(--cell); border: 2px solid var(--line);
+            display: grid; place-items: center; font-family: var(--mono); font-size: .75rem; transition: background .08s, border-color .08s; }
+  .wblock.flash { background: var(--col); border-color: var(--col); color: #fff; }
+  .wblock.flashp { background: var(--row); border-color: var(--row); color: #fff; }
+  .counter { font-family: var(--mono); font-size: .9rem; font-variant-numeric: tabular-nums; }
+  .chart { width: 100%; max-width: 680px; height: auto; }
+  .chart text { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .chart .axis { stroke: var(--line); } .chart .grid { stroke: var(--line); stroke-dasharray: 2 4; }
+  .chart .lp { stroke: var(--row); fill: none; stroke-width: 2.5; } .chart .ld { stroke: var(--col); fill: none; stroke-width: 2.5; }
+  .chart .dp { fill: var(--row); } .chart .dd { fill: var(--col); }
+  .chart .lbl { fill: var(--fg); font-size: 11.5px; }
+  .est { display: grid; gap: 10px; }
+  .est .row2 { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+  .est input { width: min(300px, 100%); }
+  .flow { font-family: var(--mono); font-size: .85rem; overflow-x: auto; white-space: pre; margin: 0; color: var(--fg); }
+  @media (prefers-reduced-motion: reduce) { .c, .mat, .bar span, .wblock { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Batched matmul: which shapes work</h1>
+  <p>The last two dims multiply (3×4 @ 4×6). The batch dims in front are matched up first.
+     Pick a case and press Play.</p>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="panel shapes" id="shapes"></div>
+  <div class="panel stage" id="stage"></div>
+  <div class="panel readout" id="readout"></div>
+
+  <div class="controls">
+    <button id="play">▶ Play</button>
+    <button id="step">Step</button>
+    <button id="reset">Reset</button>
+    <label for="speed">Speed
+      <select id="speed"><option value="900">slow</option><option value="450" selected>normal</option><option value="120">fast</option></select>
+    </label>
+    <label for="vals">Values
+      <select id="vals"><option value="ints" selected>small integers (each matrix different)</option><option value="ones">all ones (as in la.py)</option></select>
+    </label>
+  </div>
+
+  <div class="panel"><pre id="code"></pre></div>
+
+  <div class="panel cost">
+    <h2>What this matmul costs</h2>
+    <div class="terms">
+      <span><b>B</b> batch</span><span><b>M</b> rows of x</span>
+      <span><b>K</b> inner dim, summed away</span><span><b>N</b> columns of w</span>
+      <span><b>FLOP</b> one multiply or add. <b>FLOPs</b> = a count. <b>FLOPS</b> = per second.</span>
+    </div>
+    <div id="costbody"></div>
+    <label for="bytes">Bytes per number
+      <select id="bytes"><option value="4">4 (fp32)</option><option value="2" selected>2 (fp16 / bf16)</option>
+        <option value="1">1 (int8)</option><option value="0.5">0.5 (4-bit, like your model)</option></select>
+    </label>
+  </div>
+
+  <div class="panel cost">
+    <h2>Scale it up: one real Llama 3.2 1B layer</h2>
+    <p>Same formulas, but w is 2048×2048 (the model's width). M is how many tokens go through at once.
+       Decode sends 1 token. Prefill sends the whole prompt.</p>
+    <div class="slider">
+      <label for="mtok">Tokens (M)</label>
+      <input type="range" id="mtok" min="0" max="12" step="1" value="0">
+      <span class="mono" id="mval"></span>
+    </div>
+    <div id="scalebody"></div>
+  </div>
+
+  <h2 class="sect">Your Week 1 run, through this lens</h2>
+  <p>These numbers come from <code>01-first-model/benchmarks/week-01-baseline.csv</code>, measured on your M4 Pro.
+     Model: Llama 3.2 1B, 4-bit, 0.695 GB of weights. One <b>query</b> = your prompt goes in, an answer comes out.
+     It has two phases: <b style="color:var(--row)">prefill</b> reads the whole prompt at once (M = prompt tokens),
+     then <b style="color:var(--col)">decode</b> writes the answer one token at a time (M = 1).</p>
+
+  <div class="panel cost">
+    <h2>1. Watch a query, and where its time went (slowed down, to scale)</h2>
+    <div class="legend">
+      <span><i class="sw s-start"></i>startup: launch Python, load model (not inference)</span>
+      <span><i class="sw s-pre"></i>prefill = time to first token</span>
+      <span><i class="sw s-dec"></i>decode</span>
+    </div>
+    <div class="pick">
+      <button id="qpause">❚❚ Pause</button>
+      <button id="replay">↺ Replay</button>
+      <button id="zoom" aria-pressed="true">Show startup too</button>
+      <label for="slow">Slow down
+        <select id="slow"><option value="10">10×</option><option value="30">30×</option><option value="60" selected>60×</option><option value="120">120×</option></select>
+      </label>
+      <span class="label">Click a row to play that query.</span>
+    </div>
+    <div class="tl" id="timeline"></div>
+    <div class="weights">
+      <div class="wblock" id="wb">weights<br>0.70 GB</div>
+      <div class="counter" id="qcount"></div>
+    </div>
+    <div><span class="label" id="laylabel">model layers (16): each has its own weights, read in turn</span><div class="layers" id="layers"></div></div>
+    <div><span class="label">prompt tokens (prefill, all together)</span><div class="tokens" id="ptoks"></div></div>
+    <div><span class="label">generated tokens (first from prefill, the rest from decode, one per weight read)</span><div class="tokens" id="gtoks"></div></div>
+    <div id="qmsg" class="readout" style="white-space: normal"></div>
+    <p id="tlnote"></p>
+  </div>
+
+  <div class="panel cost">
+    <h2>2. Speed vs prompt length: one line climbs, one stays flat</h2>
+    <svg class="chart" id="chart" viewBox="0 0 640 280" role="img" aria-label="Tokens per second against prompt length for prefill and decode"></svg>
+    <div class="legend">
+      <span><i class="sw s-pre"></i>prefill tok/s (M = prompt tokens)</span>
+      <span><i class="sw s-dec"></i>decode tok/s (M = 1, always)</span>
+    </div>
+    <div class="kpis" id="pertok"></div>
+  </div>
+
+  <div class="panel cost">
+    <h2>3. How they depend on each other</h2>
+<pre class="flow">  prompt length P ──► prefill: M = P ──► high FLOPs/byte ──► fast per token ──► time to first token
+                                                                               │
+                                       KV cache filled for all P tokens ◄─────┘
+                                                   │
+  answer length G ──► decode: M = 1 ───► ~1 FLOP/byte ──► each token re-reads 0.70 GB ──► G × ~3.9 ms
+
+  query latency = prefill (grows slowly with P) + decode (grows directly with G)</pre>
+    <div class="est">
+      <div class="row2">
+        <label for="eP">Prompt tokens <input type="range" id="eP" min="10" max="2000" step="10" value="234"></label>
+        <label for="eG">Answer tokens <input type="range" id="eG" min="1" max="1000" step="1" value="71"></label>
+      </div>
+      <div class="tl" id="esttl"></div>
+      <div id="estmsg"></div>
+    </div>
+  </div>
+
+  <div class="panel rules">
+    <table>
+      <tr><th>Batch dim of x vs w</th><th>What NumPy does</th><th>Result</th></tr>
+      <tr><td class="mono">2 vs 2</td><td>Pairs them: x[0]·w[0], x[1]·w[1]</td><td class="mono ok">2</td></tr>
+      <tr><td class="mono">2 vs 1</td><td>Reuses w[0] for every x</td><td class="mono ok">2</td></tr>
+      <tr><td class="mono">1 vs 2</td><td>Reuses x[0] for every w</td><td class="mono ok">2</td></tr>
+      <tr><td class="mono">missing vs 2</td><td>Treats the missing dim as 1, then reuses</td><td class="mono ok">2</td></tr>
+      <tr><td class="mono">2 vs 3</td><td>No pairing rule fits, so it raises an error</td><td class="mono bad">ValueError</td></tr>
+      <tr><td class="mono">…, 4) vs (5, …</td><td>Row and column lengths differ, so there is no dot product</td><td class="mono bad">ValueError</td></tr>
+    </table>
+  </div>
+</main>
+
+<script>
+const N = 6, M = 3;
+// bx/bw: batch size (null = no batch dim). k: inner size of x; kw: inner size of w.
+const CASES = [
+  {id: "s", name: "x(3,4) @ w(4,6)", bx: null, bw: null, k: 4, kw: 4,
+   why: "Plain matrix multiply, no batch. Start here: its cost panel gives 144 FLOPs, 108 bytes, 1.33 FLOPs/byte."},
+  {id: "a", name: "x(2,3,4) @ w(1,4,6)", bx: 2, bw: 1, k: 4, kw: 4,
+   why: "x has 2 matrices, w has 1. The 1 means \"use it for all\", so w[0] is reused. Result batch = 2."},
+  {id: "b", name: "x(1,3,4) @ w(2,4,6)", bx: 1, bw: 2, k: 4, kw: 4,
+   why: "Flipped: now x has 1 and w has 2. x[0] is reused against each w. Result batch is still 2."},
+  {id: "c", name: "x(2,3,4) @ w(2,4,6)", bx: 2, bw: 2, k: 4, kw: 4,
+   why: "Both have 2. Nothing is reused: they pair one-to-one by index."},
+  {id: "d", name: "x(3,4) @ w(2,4,6)", bx: null, bw: 2, k: 4, kw: 4,
+   why: "x has no batch dim. NumPy pads it to (1,3,4), so this is the same as the flipped case."},
+  {id: "e", name: "x(2,3,4) @ w(3,4,6)", bx: 2, bw: 3, k: 4, kw: 4, err: "batch",
+   why: "2 vs 3: not equal, and neither is 1. No rule says how to pair them."},
+  {id: "f", name: "x(2,3,4) @ w(2,5,6)", bx: 2, bw: 2, k: 4, kw: 5, err: "inner",
+   why: "Batch dims are fine (2 vs 2), but each row of x has 4 numbers and each column of w has 5."},
+];
+
+let C, X, W, step = 0, timer = null;
+const $ = id => document.getElementById(id);
+const n = b => b ?? 1;                      // missing batch dim behaves like 1
+const B = () => Math.max(n(C.bx), n(C.bw));
+const xi = b => n(C.bx) === 1 ? 0 : b;      // which x a result uses
+const wi = b => n(C.bw) === 1 ? 0 : b;      // which w a result uses
+
+function makeData() {
+  const ones = $("vals").value === "ones";
+  const rnd = () => ones ? 1 : 1 + Math.floor(Math.random() * 3);
+  const mk = (cnt, r, c) => Array.from({length: cnt}, () => Array.from({length: r}, () => Array.from({length: c}, rnd)));
+  X = mk(n(C.bx), M, C.k);
+  W = mk(n(C.bw), C.kw, N);
+}
+
+function totalSteps() {
+  if (C.err === "batch") return C.bw + 1;    // try pairs 0..bw-1, then the failure
+  if (C.err === "inner") return C.kw + 1;    // walk along the row/column until they run out
+  return B() * M * N;
+}
+
+function gridEl(rows, cols, id) {
+  const g = document.createElement("div");
+  g.className = "grid"; g.id = id;
+  g.style.gridTemplateColumns = `repeat(${cols}, 34px)`;
+  for (let i = 0; i < rows * cols; i++) g.appendChild(Object.assign(document.createElement("div"), {className: "c"}));
+  return g;
+}
+function matEl(id, label, rows, cols) {
+  const m = document.createElement("div");
+  m.className = "mat"; m.id = "m" + id;
+  m.append(Object.assign(document.createElement("span"), {className: "label", textContent: label}), gridEl(rows, cols, "g" + id));
+  return m;
+}
+function stackEl(children, caption) {
+  const s = document.createElement("div");
+  s.className = "stack";
+  s.append(...children, Object.assign(document.createElement("span"), {className: "label strong", textContent: caption}));
+  return s;
+}
+
+function build() {
+  stop(); step = 0; makeData();
+  const shape = (b, r, c) => b == null ? `(${r}, ${c})` : `(${b}, ${r}, ${c})`;
+  const ok = !C.err;
+  $("shapes").innerHTML =
+    `<div>x ${shape(C.bx, M, C.k)} @ w ${shape(C.bw, C.kw, N)} → ` +
+    (ok ? `<span class="ok">y ${shape(B(), M, N)}</span>` : `<span class="bad">ValueError</span>`) + `</div>` +
+    `<div class="why">${C.why}</div>`;
+  $("code").textContent =
+    `x = np.ones(${C.bx == null ? `(${M}, ${C.k})` : shape(C.bx, M, C.k)})\n` +
+    `w = np.ones(${shape(C.bw, C.kw, N)})\n` +
+    `y = x @ w   # ` + (ok ? `y.shape == ${shape(B(), M, N)}` : `ValueError: shapes don't line up`);
+
+  const stage = $("stage"); stage.innerHTML = "";
+  const xs = X.map((_, b) => matEl("x" + b, C.bx == null ? `x  (3×${C.k})  no batch dim` : `x[${b}]  (3×${C.k})`, M, C.k));
+  const ws = W.map((_, b) => matEl("w" + b, C.bw == null ? `w  (${C.kw}×6)` : `w[${b}]  (${C.kw}×6)`, C.kw, N));
+  stage.append(
+    stackEl(xs, C.bx == null ? (C.bw == null ? "x: no batch dim" : "x: treated as batch 1") : `x: batch ${C.bx}`),
+    Object.assign(document.createElement("span"), {className: "op", textContent: "@"}),
+    stackEl(ws, C.bw == null ? "w: no batch dim" : `w: batch ${C.bw}`),
+    Object.assign(document.createElement("span"), {className: "op", textContent: "="}));
+  if (ok) {
+    const ys = Array.from({length: B()}, (_, b) => matEl("y" + b, `y[${b}] = x[${xi(b)}] @ w[${wi(b)}]`, M, N));
+    stage.append(stackEl(ys, `y: batch ${B()}`));
+  } else {
+    stage.append(Object.assign(document.createElement("div"), {className: "errbox", id: "errbox", textContent: "?"}));
+  }
+  render();
+}
+
+function paint(id, rows, cols, fn) {
+  [...$("g" + id).children].forEach((c, i) => fn(c, Math.floor(i / cols), i % cols));
+}
+
+function render() {
+  const T = totalSteps(), finished = step >= T, s = Math.min(step, T - 1);
+  if (!C.err) renderOk(s, finished);
+  else if (C.err === "batch") renderBatchErr(s, finished);
+  else renderInnerErr(s, finished);
+  renderCost();
+}
+
+const fmt = v => v >= 1e9 ? (v / 1e9).toFixed(2) + " G" : v >= 1e6 ? (v / 1e6).toFixed(2) + " M"
+               : v >= 1e4 ? (v / 1e3).toFixed(1) + " K" : String(+v.toFixed(2));
+
+function verdict(ai) {
+  // Rule of thumb: chips need tens to hundreds of FLOPs per byte to keep the math units busy.
+  if (ai < 10) return `<span class="verdict bad">memory-bound: the math waits on data</span>`;
+  if (ai < 100) return `<span class="verdict">in between</span>`;
+  return `<span class="verdict ok">compute-bound: data keeps up, math is the limit</span>`;
+}
+
+function bar(xb, wb, yb) {
+  const t = xb + wb + yb, pct = v => (100 * v / t).toFixed(0) + "%";
+  return `<div class="bar"><span class="bx" style="flex-grow:${xb}">x ${pct(xb)}</span>` +
+         `<span class="bw" style="flex-grow:${wb}">w ${pct(wb)}</span>` +
+         `<span class="by" style="flex-grow:${yb}">y ${pct(yb)}</span></div>`;
+}
+
+function kpi(k, v, how) { return `<div class="kpi"><span class="k">${k}</span><span class="v">${v}</span><span class="how">${how}</span></div>`; }
+
+function renderCost() {
+  const bpe = +$("bytes").value;
+  if (C.err) {
+    $("costbody").innerHTML = `<p>This case raises ValueError, so there is no work to count. Pick a ✓ case.</p>`;
+    renderScale();
+    return;
+  }
+  const b = B(), K = C.k, cells = b * M * N, done = Math.min(step, cells);
+  const mul = cells * K, add = cells * (K - 1), flops = 2 * b * M * N * K;
+  // Each unique input is read once: a broadcast (reused) matrix is counted once, not per use.
+  const xe = n(C.bx) * M * K, we = n(C.bw) * K * N, ye = b * M * N;
+  const bytes = (xe + we + ye) * bpe, ai = flops / bytes;
+  $("costbody").innerHTML =
+    `<div class="terms"><span>Here: <b>B=${b}  M=${M}  K=${K}  N=${N}</b></span></div>` +
+    `<div class="kpis">` +
+    kpi("Exact work (so far / total)", `${done * K} / ${mul} mul<br>${done * (K - 1)} / ${add} add`,
+        `${cells} output cells × ${K} multiplies and ${K - 1} adds each`) +
+    kpi("Common FLOP count", `${flops} FLOPs`,
+        `2·B·M·N·K = 2·${b}·${M}·${N}·${K}. Exact is ${mul + add}. The extra ${cells} = one add per cell: ` +
+        `hardware starts each cell at acc = 0 and does ${K} fused multiply-adds (acc += a·b), each counted as 2.`) +
+    kpi("Data moved (ideal)", `${fmt(bytes)} bytes`,
+        `(x ${xe} + w ${we} + y ${ye}) numbers × ${bpe} bytes`) +
+    kpi("Arithmetic intensity", `${ai.toFixed(2)} FLOPs/byte`, `${flops} FLOPs ÷ ${fmt(bytes)} bytes`) +
+    `</div>` + bar(xe, we, ye) +
+    `<div>${verdict(ai)}. ` +
+    (n(C.bx) !== n(C.bw) ? `The reused matrix is fetched once, so reuse raises FLOPs/byte for free.` : ``) + `</div>`;
+  renderScale();
+}
+
+const MS = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
+function renderScale() {
+  const bpe = +$("bytes").value, D = 2048, m = MS[+$("mtok").value];
+  const flops = 2 * m * D * D, xe = m * D, we = D * D, ye = m * D;
+  const bytes = (xe + we + ye) * bpe, ai = flops / bytes;
+  $("mval").textContent = `M = ${m}` + (m === 1 ? "  (decode: 1 new token)" : `  (prefill: ${m}-token prompt)`);
+  $("scalebody").innerHTML =
+    `<div class="kpis">` +
+    kpi("FLOPs", fmt(flops), `2·${m}·2048·2048: grows with M`) +
+    kpi("Bytes moved", fmt(bytes), `w alone is ${fmt(we * bpe)}: fixed, whatever M is`) +
+    kpi("Arithmetic intensity", `${ai.toFixed(1)} FLOPs/byte`, verdict(ai)) +
+    `</div>` + bar(xe, we, ye) +
+    `<p>Drag M from 1 upward. FLOPs grow with M, but the weight bytes stay put, so each byte fetched gets used more.
+       At M=1 nearly all traffic is w, which is why decode is slow per token and prefill is fast.</p>`;
+}
+
+function renderOk(s, finished) {
+  const b = Math.floor(s / (M * N)), i = Math.floor(s / N) % M, j = s % N;
+  const dot = (bb, r, col) => X[xi(bb)][r].reduce((a, v, k) => a + v * W[wi(bb)][k][col], 0);
+  X.forEach((_, bx) => {
+    const active = !finished && xi(b) === bx;
+    $("mx" + bx).classList.toggle("dim", !finished && !active);
+    paint("x" + bx, M, C.k, (c, r, k) => { c.textContent = X[bx][r][k]; c.className = "c" + (active && r === i ? " row" : ""); });
+  });
+  W.forEach((_, bw) => {
+    const active = !finished && wi(b) === bw;
+    $("mw" + bw).classList.toggle("dim", !finished && !active);
+    paint("w" + bw, C.kw, N, (c, r, col) => { c.textContent = W[bw][r][col]; c.className = "c" + (active && col === j ? " col" : ""); });
+  });
+  for (let bb = 0; bb < B(); bb++) {
+    $("my" + bb).classList.toggle("dim", !finished && bb !== b);
+    paint("y" + bb, M, N, (c, r, col) => {
+      const idx = bb * M * N + r * N + col;
+      if (idx < step) { c.textContent = dot(bb, r, col); c.className = "c done"; }
+      else if (idx === step && !finished) { c.textContent = dot(bb, r, col); c.className = "c now"; }
+      else { c.textContent = "·"; c.className = "c empty"; }
+    });
+  }
+  if (finished) {
+    $("readout").innerHTML = `Done: ${B()} results × 3 rows × 6 cols. ` +
+      (n(C.bx) === 1 && n(C.bw) > 1 ? "The same x was reused for each w." :
+       n(C.bw) === 1 && n(C.bx) > 1 ? "The same w was reused for each x." : "Each x was paired with its own w.");
+  } else {
+    const terms = X[xi(b)][i].map((v, k) => `<span class="r">${v}</span>·<span class="k">${W[wi(b)][k][j]}</span>`).join(" + ");
+    $("readout").innerHTML = `y[${b}][${i}][${j}] = x[${xi(b)}] row ${i} · w[${wi(b)}] col ${j} = ${terms} = <span class="o">${dot(b, i, j)}</span>`;
+  }
+}
+
+function renderBatchErr(s, finished) {
+  // Steps 0..bw-1: try to give w[s] a partner. x only has indices 0..bx-1.
+  const fail = s >= C.bx;
+  X.forEach((_, bx) => {
+    $("mx" + bx).classList.toggle("dim", bx !== s);
+    paint("x" + bx, M, C.k, (c, r, k) => { c.textContent = X[bx][r][k]; c.className = "c" + (bx === s ? " row" : ""); });
+  });
+  W.forEach((_, bw) => {
+    $("mw" + bw).classList.toggle("dim", bw !== s);
+    $("mw" + bw).classList.toggle("err", bw === s && fail);
+    paint("w" + bw, C.kw, N, (c, r, col) => { c.textContent = W[bw][r][col]; c.className = "c" + (bw === s ? (fail ? " miss" : " col") : ""); });
+  });
+  if (!fail) {
+    $("errbox").textContent = `w[${s}] ↔ x[${s}]  ok so far`;
+    $("readout").innerHTML = `Pair ${s}: x[${s}] with w[${s}]. Looks fine so far.`;
+  } else {
+    $("errbox").textContent = `w[${s}] ↔ x[${s}]?  x has no index ${s}.`;
+    $("readout").innerHTML = `<span class="x">x has 2 matrices, w has 3.</span> Should w[2] reuse x[0]? x[1]? Be skipped? ` +
+      `NumPy does not guess. Only 'equal' or '1' are allowed, so it raises ValueError.`;
+  }
+}
+
+function renderInnerErr(s, finished) {
+  // Walk one row of x[0] and one column of w[0] together. x's row runs out at k = 4.
+  const k = s;
+  paint("x0", M, C.k, (c, r, kk) => { c.textContent = X[0][r][kk]; c.className = "c" + (r === 0 && kk <= k ? " row" : ""); });
+  paint("w0", C.kw, N, (c, r, col) => {
+    c.textContent = W[0][r][col];
+    c.className = "c" + (col === 0 && r <= k ? (r >= C.k ? " miss" : " col") : "");
+  });
+  X.forEach((_, bx) => $("mx" + bx).classList.toggle("dim", bx !== 0));
+  W.forEach((_, bw) => $("mw" + bw).classList.toggle("dim", bw !== 0));
+  const terms = [];
+  for (let kk = 0; kk <= Math.min(k, C.kw - 1); kk++) {
+    terms.push(kk < C.k ? `<span class="r">${X[0][0][kk]}</span>·<span class="k">${W[0][kk][0]}</span>`
+                        : `<span class="x">?</span>·<span class="k">${W[0][kk][0]}</span>`);
+  }
+  if (k < C.k) {
+    $("errbox").textContent = `pairing element ${k}`;
+    $("readout").innerHTML = `y[0][0][0] = ${terms.join(" + ")} …`;
+  } else {
+    $("errbox").textContent = `row has ${C.k} numbers, column has ${C.kw}. No dot product.`;
+    $("readout").innerHTML = `y[0][0][0] = ${terms.join(" + ")}  <span class="x">← x's row ran out. ` +
+      `The inner dims (4 vs 5) must match, so NumPy raises ValueError.</span>`;
+  }
+}
+
+function advance() { if (step < totalSteps()) { step++; render(); } else stop(); }
+function stop() { clearInterval(timer); timer = null; $("play").textContent = "▶ Play"; }
+function play() {
+  if (step >= totalSteps()) step = 0;
+  const slow = C.err ? 3 : 1;                // error cases have few steps; slow them down
+  timer = setInterval(advance, +$("speed").value * slow);
+  $("play").textContent = "❚❚ Pause";
+}
+
+function pick(c) {
+  C = c;
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-pressed", t.dataset.id === c.id));
+  build();
+}
+
+CASES.forEach(c => {
+  const t = document.createElement("button");
+  t.className = "tab"; t.dataset.id = c.id;
+  t.innerHTML = `${c.name}<span class="tag ${c.err ? "bad" : "ok"}">${c.err ? "✗" : "✓"}</span>`;
+  t.onclick = () => pick(c);
+  $("tabs").appendChild(t);
+});
+$("play").onclick = () => timer ? stop() : play();
+$("step").onclick = () => { stop(); advance(); };
+$("reset").onclick = () => { stop(); step = 0; render(); };
+$("speed").onchange = () => { if (timer) { stop(); play(); } };
+$("vals").onchange = () => build();
+$("bytes").onchange = () => renderCost();
+$("mtok").oninput = () => renderScale();
+pick(CASES[0]);
+
+// ---------- Week 1 data: 01-first-model/benchmarks/week-01-baseline.csv ----------
+const RUNS = [
+  {name: "short",  P: 43,  pTps: 767.799,  G: 79, gTps: 266.850, wall: 1.99},
+  {name: "medium", P: 90,  pTps: 1216.567, G: 66, gTps: 245.705, wall: 2.06},
+  {name: "long",   P: 234, pTps: 2033.979, G: 71, gTps: 259.620, wall: 2.05},
+];
+const WEIGHTS_GB = 0.695;
+RUNS.forEach(r => { r.pre = r.P / r.pTps; r.dec = r.G / r.gTps; r.start = Math.max(0, r.wall - r.pre - r.dec); });
+const ms = s => (s * 1000).toFixed(0) + " ms";
+
+// 1. One query: timeline rows (pick + playhead) and the token animation, driven by one clock.
+let Q = RUNS[2], raf = null, zoom = true;
+function lane(parts, max) {
+  return `<div class="lane">` + parts.map(([cls, v, txt]) =>
+    `<span class="${cls}" style="flex: 0 0 ${(100 * v / max).toFixed(2)}%" title="${txt}">${txt}</span>`).join("") +
+    `<div class="playhead" hidden></div></div>`;
+}
+const tlMax = () => Math.max(...RUNS.map(r => zoom ? r.pre + r.dec : r.wall));
+function renderTimeline() {
+  const max = tlMax();
+  $("timeline").innerHTML = "";
+  RUNS.forEach(r => {
+    const row = document.createElement("div");
+    row.className = "row " + (r === Q ? "on" : "off");
+    row.innerHTML = `<span class="mono">${r.name}<br><small>${r.P} → ${r.G}</small></span>` + lane([
+      ...(zoom ? [] : [["s-start", r.start, `startup ${r.start.toFixed(2)} s`]]),
+      ["s-pre", r.pre, ms(r.pre)], ["s-dec", r.dec, `decode ${ms(r.dec)}`]], max);
+    row.onclick = () => { Q = r; renderTimeline(); runQuery(); };
+    $("timeline").appendChild(row);
+  });
+  $("zoom").setAttribute("aria-pressed", zoom);
+  $("zoom").textContent = zoom ? "Show startup too" : "Hide startup, zoom in on inference";
+  $("tlnote").textContent = zoom
+    ? "Prefill grows only from 56 to 115 ms while the prompt grows 5× (43 → 234 tokens). Decode is about the same for each, because each answer is roughly 70 tokens."
+    : "The ~1.6 s of startup is in process_wall_s, but it isn't inference. The playhead skips it. That's why the lesson says wall time and generation rate are different measurements.";
+}
+function playhead(t) {
+  const row = $("timeline").querySelector(".row.on .playhead");
+  if (!row) return;
+  row.hidden = false;
+  row.style.left = (100 * ((zoom ? 0 : Q.start) + t) / tlMax()).toFixed(2) + "%";
+}
+function toks(el, count) { el.innerHTML = ""; for (let i = 0; i < count; i++) el.appendChild(Object.assign(document.createElement("i"), {className: "tok"})); }
+function runQuery() {
+  cancelAnimationFrame(raf);
+  toks($("ptoks"), Q.P); toks($("gtoks"), Q.G);
+  const pEls = [...$("ptoks").children], gEls = [...$("gtoks").children], wb = $("wb");
+  let lastG = -1;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  qT = reduce ? Infinity : 0; qPaused = false; qLast = performance.now(); pauseLabel();
+  qFrame = function frame(now) {
+    // qT = seconds of real inference time shown so far; it only advances while not paused.
+    if (!qPaused) qT += (now - qLast) / 1000 / +$("slow").value;
+    qLast = now;
+    const t = Math.min(Q.pre + Q.dec, qT);
+    playhead(t);
+    if (t < Q.pre) {
+      const L = Math.min(LAYERS, Math.floor(t / Q.pre * LAYERS) + 1);
+      layers(L, "p");
+      wb.className = "wblock flashp";
+      pEls.forEach(e => e.className = "tok pa");
+      $("qcount").innerHTML = `Weight reads: <b>1</b> (prefill, all ${Q.P} prompt tokens share it)`;
+      $("qmsg").innerHTML = `Prefill, layer ${L} of ${LAYERS}: all ${Q.P} prompt tokens go through this layer's weights together (M = ${Q.P}). ` +
+        `After layer 16, the last prompt token's output becomes answer token 1. ${ms(t)} / ${ms(Q.pre)}`;
+    } else {
+      pEls.forEach(e => e.className = "tok p");
+      const per = Q.dec / Q.G, g = Math.min(Q.G, Math.floor((t - Q.pre) / per) + 1);
+      if (t < Q.pre + Q.dec) layers(Math.floor(((t - Q.pre) % per) / per * LAYERS) + 1, "d"); else layers(0, "d");
+      for (let i = 0; i < g; i++) gEls[i].className = "tok g";
+      if (g !== lastG) { wb.className = "wblock flash"; setTimeout(() => wb.className = "wblock", 60); lastG = g; }
+      // Prefill's single pass already produced answer token 1, so decode adds g - 1 more reads.
+      $("qcount").innerHTML = `Weight reads: 1 (prefill → prompt + answer token 1) + <b>${g - 1}</b> (decode) = ${g}` +
+        ` → ${(g * WEIGHTS_GB).toFixed(1)} GB pulled from memory`;
+      $("qmsg").innerHTML = t < Q.pre + Q.dec
+        ? (g === 1 ? `Answer token 1 came out of prefill. Decode now makes the rest. ${ms(t)}`
+           : `Decode: token ${g} of ${Q.G}. Each one needs the previous one, so M = 1 and all 0.70 GB is re-read. ${ms(t)}`)
+        : `Done in ${ms(Q.pre + Q.dec)}: prefill ${ms(Q.pre)} for ${Q.P} tokens, decode ${ms(Q.dec)} for ${Q.G} tokens. ` +
+          `Same model, same chip. Per token, prefill was ${((Q.dec / Q.G) / (Q.pre / Q.P)).toFixed(0)}× cheaper.`;
+    }
+    if (t < Q.pre + Q.dec && !qPaused) raf = requestAnimationFrame(frame);
+    else pauseLabel();
+  };
+  raf = requestAnimationFrame(qFrame);
+}
+let qT = 0, qPaused = false, qLast = 0, qFrame = null;
+const LAYERS = 16;   // num_hidden_layers in the model's config.json
+function layers(cur, phase) {
+  // cur = layer being run now (1-based); earlier layers are done for this pass. 0 = idle.
+  const el = $("layers");
+  if (el.children.length !== LAYERS) { el.innerHTML = ""; for (let i = 1; i <= LAYERS; i++) el.appendChild(Object.assign(document.createElement("i"), {className: "lay", textContent: i})); }
+  [...el.children].forEach((c, i) => c.className = "lay" + (i + 1 < cur ? " done" + phase : i + 1 === cur ? " now" + phase : ""));
+  $("laylabel").textContent = cur === 0 ? "model layers (16): each has its own weights, read in turn"
+    : phase === "p" ? `model layers: prefill pass, layer ${cur}/16, all ${Q.P} tokens at once`
+    : `model layers: decode pass for one token, layer ${cur}/16 (one pass per answer token)`;
+}
+const qDone = () => qT >= Q.pre + Q.dec;
+function pauseLabel() { $("qpause").textContent = qPaused || qDone() ? "▶ Play" : "❚❚ Pause"; }
+$("qpause").onclick = () => {
+  if (qDone()) return runQuery();             // finished: Play starts it again
+  qPaused = !qPaused;
+  if (!qPaused) { cancelAnimationFrame(raf); qLast = performance.now(); raf = requestAnimationFrame(qFrame); }
+  pauseLabel();
+};
+$("replay").onclick = runQuery;
+$("zoom").onclick = () => { zoom = !zoom; renderTimeline(); runQuery(); };
+
+// 3. Chart
+function renderChart() {
+  const W = 640, H = 280, L = 56, R = 120, T = 16, Bm = 40;
+  const x = v => L + (W - L - R) * v / 250, y = v => H - Bm - (H - T - Bm) * v / 2200;
+  let s = "";
+  for (const v of [0, 500, 1000, 1500, 2000]) s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  for (const v of [0, 50, 100, 150, 200, 250]) s += `<text x="${x(v)}" y="${H - Bm + 18}" text-anchor="middle">${v}</text>`;
+  s += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">prompt tokens (= M during prefill)</text>`;
+  s += `<text x="14" y="${(T + H - Bm) / 2}" transform="rotate(-90 14 ${(T + H - Bm) / 2})" text-anchor="middle">tokens / second</text>`;
+  s += `<polyline class="lp" points="${RUNS.map(r => `${x(r.P)},${y(r.pTps)}`).join(" ")}"/>`;
+  s += `<polyline class="ld" points="${RUNS.map(r => `${x(r.P)},${y(r.gTps)}`).join(" ")}"/>`;
+  RUNS.forEach(r => {
+    s += `<circle class="dp" cx="${x(r.P)}" cy="${y(r.pTps)}" r="5"/><text class="lbl" x="${x(r.P) + 8}" y="${y(r.pTps) + 14}">${Math.round(r.pTps)}</text>`;
+    s += `<circle class="dd" cx="${x(r.P)}" cy="${y(r.gTps)}" r="5"/><text class="lbl" x="${x(r.P) + 8}" y="${y(r.gTps) - 8}">${Math.round(r.gTps)}</text>`;
+  });
+  s += `<text class="lbl" x="${W - R + 10}" y="${y(2034) + 4}">prefill: more</text><text class="lbl" x="${W - R + 10}" y="${y(2034) + 18}">tokens share</text><text class="lbl" x="${W - R + 10}" y="${y(2034) + 32}">each weight read</text>`;
+  s += `<text class="lbl" x="${W - R + 10}" y="${y(260) - 10}">decode: M = 1,</text><text class="lbl" x="${W - R + 10}" y="${y(260) + 4}">memory-bound</text>`;
+  $("chart").innerHTML = s;
+
+  const avgG = RUNS.reduce((a, r) => a + r.gTps, 0) / RUNS.length;
+  $("pertok").innerHTML =
+    kpi("Cost per prompt token", RUNS.map(r => `${(1000 / r.pTps).toFixed(2)} ms`).join(" → "),
+        "short → medium → long. Gets cheaper as M grows.") +
+    kpi("Cost per answer token", RUNS.map(r => `${(1000 / r.gTps).toFixed(2)} ms`).join(" · "),
+        "About the same every time. M is always 1.") +
+    kpi("Decode ≈ memory speed", `~${Math.round(avgG * WEIGHTS_GB)} GB/s`,
+        `${avgG.toFixed(0)} tok/s × 0.695 GB read per token. M4 Pro memory is rated 273 GB/s, so decode is mostly waiting on memory.`);
+}
+
+// 4. Estimator: prefill rate interpolated from your 3 points (flat beyond 234 = a guess), decode rate = your average.
+function prefillRate(P) {
+  const pts = RUNS.map(r => [Math.log(r.P), r.pTps]), lx = Math.log(P);
+  if (lx <= pts[0][0]) return pts[0][1] * P / RUNS[0].P;   // below 43: scale down (even fewer tokens share the read)
+  if (lx >= pts[2][0]) return pts[2][1];
+  const i = lx < pts[1][0] ? 0 : 1, f = (lx - pts[i][0]) / (pts[i + 1][0] - pts[i][0]);
+  return pts[i][1] + f * (pts[i + 1][1] - pts[i][1]);
+}
+function renderEst() {
+  const P = +$("eP").value, G = +$("eG").value;
+  const avgG = RUNS.reduce((a, r) => a + r.gTps, 0) / RUNS.length;
+  const pre = P / prefillRate(P), dec = G / avgG, tot = pre + dec;
+  $("esttl").innerHTML = `<span class="mono">query</span>` + lane([["s-pre", pre, `prefill ${ms(pre)}`], ["s-dec", dec, `decode ${ms(dec)}`]], tot);
+  const share = 100 * dec / tot;
+  $("estmsg").innerHTML =
+    `${P} prompt tokens + ${G} answer tokens ≈ <b>${ms(tot)}</b>. Time to first token ≈ ${ms(pre)}. ` +
+    `Decode is ${share.toFixed(0)}% of the time. ` +
+    (P > 234 ? `<span class="bad">Prompts above 234 tokens weren't measured, so this assumes prefill speed stays at your long-prompt rate.</span> ` : "") +
+    (share > 60 ? "Long answers cost the most: each answer token is a full weight read." :
+     "Here the prompt dominates. Very long prompts (documents, RAG) make prefill and the first token slow.");
+}
+$("eP").oninput = renderEst; $("eG").oninput = renderEst;
+
+renderTimeline(); runQuery(); renderChart(); renderEst();
+</script>
+</body>
+</html>
