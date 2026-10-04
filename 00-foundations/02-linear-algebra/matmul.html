@@ -181,6 +181,52 @@
     <div id="scalebody"></div>
   </div>
 
+  <div class="panel cost">
+    <h2>Why more tokens raise FLOPs/byte: split the byte bill</h2>
+    <p>From the FLOP-counting lesson: fp32 (4 bytes per number), a 1024×1024 weight matrix, each token a row of 1024 numbers.
+       The lesson calls the token count <b>N</b>. It is the same thing as M here: how many tokens use the same weights in one pass.</p>
+
+    <div class="terms"><span><i class="sw bx"></i>tokens in</span><span><i class="sw bw"></i>weights</span><span><i class="sw by"></i>results out</span></div>
+
+    <table>
+      <tr><th>1 token</th><th>Count</th><th>Bytes</th></tr>
+      <tr><td>Weights</td><td class="mono">1024 × 1024</td><td class="mono">4,194,304</td></tr>
+      <tr><td>Token in</td><td class="mono">1 × 1024</td><td class="mono">4,096</td></tr>
+      <tr><td>Result out</td><td class="mono">1 × 1024</td><td class="mono">4,096</td></tr>
+      <tr><th>Total</th><td></td><th class="mono">4,202,496 ≈ 4.20 MB</th></tr>
+    </table>
+    <div class="bar" title="1 token: almost all of the bill is weights">
+      <span class="bx" style="flex-grow:4096"></span><span class="bw" style="flex-grow:4194304">weights 4.19 MB</span><span class="by" style="flex-grow:4096"></span>
+    </div>
+
+    <table>
+      <tr><th>64 tokens</th><th>Count</th><th>Bytes</th></tr>
+      <tr><td>Weights</td><td class="mono">1024 × 1024</td><td class="mono">4,194,304 <b>(same)</b></td></tr>
+      <tr><td>Tokens in</td><td class="mono">64 × 1024</td><td class="mono">262,144</td></tr>
+      <tr><td>Results out</td><td class="mono">64 × 1024</td><td class="mono">262,144</td></tr>
+      <tr><th>Total</th><td></td><th class="mono">4,718,592 ≈ 4.72 MB</th></tr>
+    </table>
+    <div class="bar" title="64 tokens: the weights are still most of the bill">
+      <span class="bx" style="flex-grow:262144">in</span><span class="bw" style="flex-grow:4194304">weights 4.19 MB (same)</span><span class="by" style="flex-grow:262144">out</span>
+    </div>
+    <p>The weight line is identical in both bills, and it is almost the whole bill.
+       63 extra tokens only add their small rows: about 0.5 MB on top of 4.2 MB, which is the "bytes grew only about 12%".</p>
+
+    <table>
+      <tr><th>The work bill</th><th>FLOPs</th></tr>
+      <tr><td>1 token: a full pass over the weights, 1024 × 1024 multiply-adds × 2</td><td class="mono">2,097,152 ≈ 2.1 M</td></tr>
+      <tr><td>64 tokens: 64 full passes, no shared discount</td><td class="mono">134,217,728 ≈ 134 M</td></tr>
+    </table>
+
+    <table>
+      <tr><th></th><th>Work</th><th>Bytes</th><th>Work ÷ bytes</th></tr>
+      <tr><td>1 token</td><td class="mono">2.1 M</td><td class="mono">4.20 MB</td><td class="mono"><b>0.5</b></td></tr>
+      <tr><td>64 tokens</td><td class="mono">134 M</td><td class="mono">4.72 MB</td><td class="mono"><b>28.4</b></td></tr>
+    </table>
+    <p class="verdict" style="color:var(--fg)">Work went up 64×. Bytes barely moved, because the weights are fetched once no matter how many tokens use them.
+       So each byte fetched now pays for about 57× more math.</p>
+  </div>
+
   <h2 class="sect">Your Week 1 run, through this lens</h2>
   <p>These numbers come from <code>01-first-model/benchmarks/week-01-baseline.csv</code>, measured on your M4 Pro.
      Model: Llama 3.2 1B, 4-bit, 0.695 GB of weights. One <b>query</b> = your prompt goes in, an answer comes out.
