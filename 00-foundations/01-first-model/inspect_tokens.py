@@ -19,6 +19,7 @@ BENCH_DIR = LESSON_DIR / "benchmarks"
 TEXTS = {
     "original": "Explain a matrix in two sentences.",
     "punctuation": "Explain a matrix, in two sentences!",  # only punctuation changed
+    "rare-and-number": "Tokenize 3.14159 antidisestablishmentarianism",  # predict before running
 }
 
 
