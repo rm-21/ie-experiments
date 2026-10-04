@@ -28,10 +28,13 @@ def make_prompt(tokenizer, n_tokens: int) -> list[int]:
 
 def run_once(model, tokenizer, prompt: list[int], max_tokens: int) -> dict:
     start = time.perf_counter()
-    ttft = None
+    ttft = 0.0
+    response = None
     for response in stream_generate(model, tokenizer, prompt, max_tokens=max_tokens):
-        if ttft is None:
+        if not ttft:
             ttft = time.perf_counter() - start
+    if response is None:
+        raise RuntimeError("stream_generate produced no tokens")
     return {
         "prompt_tokens": response.prompt_tokens,
         "prompt_tps": response.prompt_tps,
@@ -58,17 +61,14 @@ def main() -> None:
     args = parser.parse_args()
 
     start = time.perf_counter()
-    model, tokenizer = load(args.model)
+    model, tokenizer = load(args.model)[:2]
     mx.eval(model.parameters())
     print(f"Model load: {time.perf_counter() - start:.2f} s")
 
     # Warmup: compiles Metal kernels and pages weights in; not counted.
     run_once(model, tokenizer, make_prompt(tokenizer, 128), max_tokens=16)
 
-    print(
-        f"\n{'prompt':>7} | {'prefill tok/s':>16} | {'TTFT ms':>16} | "
-        f"{'decode tok/s':>16} | {'peak GB':>7}"
-    )
+    print(f"\n{'prompt':>7} | {'prefill tok/s':>16} | {'TTFT ms':>16} | {'decode tok/s':>16} | {'peak GB':>7}")
     print("-" * 75)
     for n in args.prompt_lengths:
         prompt = make_prompt(tokenizer, n)

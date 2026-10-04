@@ -1,0 +1,9 @@
+==========
+A matrix is a rectangular array of numbers that can be used to represent linear relationships between vectors, allowing for efficient computation of dot products and other operations in linear algebra. In the context of neural networks, matrices are used to represent weights and biases, which are learned during training to optimize the model's performance on a specific task
+==========
+Prompt: 90 tokens, 1335.673 tokens-per-sec
+Generation: 64 tokens, 266.942 tokens-per-sec
+Peak memory: 0.849 GB
+
+Fetching 6 files:   0%|          | 0/6 [00:00<?, ?it/s]
+Fetching 6 files: 100%|██████████| 6/6 [00:00<00:00, 2320.29it/s]

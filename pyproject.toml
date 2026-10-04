@@ -1,2 +1,42 @@
 [tool.uv.workspace]
 members = ["mlx-lm-run"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+    "ty>=0.0.29",
+]
+
+[tool.ruff]
+fix = true
+indent-width = 4
+line-length = 120
+target-version = "py314"
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.rules]
+# Promote warnings to errors
+possibly-unresolved-reference = "error"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+possibly-missing-implicit-call = "error"
+possibly-missing-submodule = "error"
+unused-ignore-comment = "error"
+unused-type-ignore-comment = "error"
+redundant-cast = "error"
+deprecated = "error"
+ignore-comment-unknown-rule = "error"
+invalid-ignore-comment = "error"
+ambiguous-protocol-member = "error"
+ineffective-final = "error"
+shadowed-type-variable = "error"
+redundant-final-classvar = "error"
+unused-awaitable = "error"
+useless-overload-body = "error"
+invalid-enum-member-annotation = "error"
+invalid-legacy-positional-parameter = "error"
+
+# Enable (off by default)
+division-by-zero = "warn"

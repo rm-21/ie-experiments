@@ -1,0 +1,9 @@
+==========
+A matrix is a two-dimensional array of values, where each cell can hold a specific value or a set of values, and is used to represent and manipulate data in a structured and efficient way. Matrices can be used to perform operations such as addition, multiplication, and transpose, and are commonly used in fields like mathematics
+==========
+Prompt: 43 tokens, 334.887 tokens-per-sec
+Generation: 64 tokens, 246.161 tokens-per-sec
+Peak memory: 0.799 GB
+
+Fetching 6 files:   0%|          | 0/6 [00:00<?, ?it/s]
+Fetching 6 files: 100%|██████████| 6/6 [00:00<00:00, 3712.87it/s]
