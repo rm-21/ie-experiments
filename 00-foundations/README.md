@@ -6,7 +6,7 @@ Phase 00: Math and autograd foundations. One folder per lesson.
 |---|---|---|
 | 01 | `p0-b-first-model`: run a local model and record a baseline | [01-first-model/](01-first-model/) |
 | 02 | `p0-c-linear-algebra` | |
-| 03 | `p0-c-flop-counting` | |
+| 03 | `p0-c-flop-counting` | [03-flop-counting/](03-flop-counting/) |
 | 04 | `p0-b-numpy-matmul` | |
 | 05 | `p0-c-calculus-backprop` | |
 | 06 | `p0-b-micrograd` | |

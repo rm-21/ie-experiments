@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roofline, Two Workers</title>
+<style>
+  :root {
+    --bg: #fbfaf7; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e4e1da;
+    --calc: #2f6fde; --carry: #d9822b; --ok: #2e8b57; --bad: #c0392b; --code: #f3f1ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --card: #1f1f1c; --ink: #ecebe6; --muted: #a09e97; --line: #34332f;
+      --calc: #6b9bff; --carry: #f0a35a; --ok: #5cc28a; --bad: #ef6f62; --code: #2a2a26;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 32px; }
+  h2 { font-size: 1.25rem; margin: 44px 0 10px; }
+  h2 .n { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .big { font-size: 1.15rem; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: .85rem; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  .calc { color: var(--calc); font-weight: 600; }
+  .carry { color: var(--carry); font-weight: 600; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .bad { color: var(--bad); font-weight: 600; }
+  .idle { color: var(--muted); font-style: italic; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+  .tag { display: inline-block; font-size: .8rem; padding: 2px 8px; border-radius: 99px; border: 1px solid currentColor; }
+  /* interactive */
+  .ctrl { display: grid; grid-template-columns: 150px 1fr 60px; align-items: center; gap: 10px; margin: 6px 0; }
+  .ctrl input { width: 100%; }
+  .ctrl output { text-align: right; font-variant-numeric: tabular-nums; }
+  @media (max-width: 500px) { .ctrl { grid-template-columns: 1fr 60px; } .ctrl input { grid-column: 1 / -1; grid-row: 2; } }
+  .bar-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; margin: 8px 0; }
+  .track { background: var(--code); border-radius: 6px; height: 26px; position: relative; overflow: hidden; }
+  .fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 8px;
+    color: #fff; font-size: .85rem; font-weight: 600; white-space: nowrap; transition: width .2s; }
+  .verdict { margin-top: 12px; padding: 12px 14px; border-radius: 8px; background: var(--code); }
+  svg text { fill: var(--muted); font-size: 12px; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; color: var(--calc); font-weight: 600; }
+  ul { padding-left: 22px; }
+  .real { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: .92rem; color: var(--muted); }
+  .real b { color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Roofline, explained with two workers</h1>
+  <p class="sub">Phase 00 · Lesson 03 (FLOP counting) · No formulas until they've earned their place.</p>
+
+  <!-- 1 -->
+  <h2><span class="n">1</span>Two workers, one job</h2>
+  <p>Your chip has two workers who work <b>at the same time</b>:</p>
+  <div class="grid2">
+    <div class="card"><div class="big calc">🧮 Calculator</div>Does the math.<br>Speed <b>P</b> = FLOPs per second
+      <div class="real">Real name: <b>compute units</b> (GPU cores, tensor cores, CPU SIMD units). Their speed is <b>peak compute throughput</b>, in FLOP/s.</div></div>
+    <div class="card"><div class="big carry">🚚 Carrier</div>Brings numbers in from memory.<br>Speed <b>B</b> = bytes per second
+      <div class="real">Real name: the <b>memory system</b> (DRAM/HBM to the chip). Its speed is <b>memory bandwidth</b>, in bytes/s (GB/s).</div></div>
+  </div>
+  <div class="card big">The job is done when both are finished. You always wait for the slower one.</div>
+
+  <!-- 2 -->
+  <h2><span class="n">2</span>A toy machine</h2>
+  <p>Calculator: <b>10 FLOPs/sec</b>. Carrier: <b>2 bytes/sec</b>.</p>
+  <div class="grid2">
+    <div class="card">
+      <b>Job A</b>: 20 FLOPs, 8 bytes
+      <table>
+        <tr><td class="calc">🧮 Calculator</td><td>20 ÷ 10 = 2 s</td></tr>
+        <tr><td class="carry">🚚 Carrier</td><td><b>8 ÷ 2 = 4 s</b></td></tr>
+      </table>
+      Takes <b>4 s</b>. <span class="tag carry">memory-bound</span>
+    </div>
+    <div class="card">
+      <b>Job B</b>: 100 FLOPs, 8 bytes
+      <table>
+        <tr><td class="calc">🧮 Calculator</td><td><b>100 ÷ 10 = 10 s</b></td></tr>
+        <tr><td class="carry">🚚 Carrier</td><td>8 ÷ 2 = 4 s</td></tr>
+      </table>
+      Takes <b>10 s</b>. <span class="tag calc">compute-bound</span>
+    </div>
+  </div>
+  <p>Job B is Job A with more math reusing the <i>same</i> bytes, like more rows going through the same weights.</p>
+
+  <!-- 3 -->
+  <h2><span class="n">3</span>Why Job A is "slow": the calculator starves</h2>
+  <p>Job A has 2.5 FLOPs of work per byte. Watch it second by second:</p>
+  <div class="card">
+    <table>
+      <tr><th>Second</th><th>Bytes arrive</th><th>Work unlocked</th><th>Calculator could do</th><th>Calculator does</th></tr>
+      <tr><td>1</td><td>2</td><td>2 × 2.5 = 5</td><td>10</td><td>5 <span class="idle">then idle</span></td></tr>
+      <tr><td>2</td><td>2</td><td>5</td><td>10</td><td>5 <span class="idle">then idle</span></td></tr>
+      <tr><td>3</td><td>2</td><td>5</td><td>10</td><td>5 <span class="idle">then idle</span></td></tr>
+      <tr><td>4</td><td>2</td><td>5</td><td>10</td><td>5 <span class="idle">then idle</span></td></tr>
+    </table>
+    The job isn't too demanding. It's <b>too light on math</b>. Data arrives at 2 bytes/s × 2.5 FLOPs per byte = <b>5 FLOP/s</b>, so the calculator runs at half its speed and waits for data the rest of the time.
+  </div>
+  <p>Job B, by contrast: 2 bytes/s × 12.5 FLOPs per byte = 25 FLOPs of work arriving each second. The calculator can only clear 10, so work <b>piles up</b> and the carrier ends up waiting.</p>
+  <p>🍳 <i>A chef who can cook 10 dishes/hour, with ingredients arriving for only 5 dishes/hour, isn't slow. They're waiting for ingredients.</i></p>
+
+  <!-- 4 -->
+  <h2><span class="n">4</span>One question instead of two divisions</h2>
+  <div class="grid2">
+    <div class="card"><b>Intensity</b> = FLOPs ÷ bytes<br>The work this job gives per byte.<br>Job A: 2.5 · Job B: 12.5</div>
+    <div class="card"><b>Ridge</b> = P ÷ B = 10 ÷ 2 = <b>5</b><br>The work per byte the calculator needs to stay busy.</div>
+  </div>
+  <table>
+    <tr><td>Intensity <b>&lt;</b> ridge</td><td>The calculator <b>starves</b></td><td><span class="tag carry">memory-bound</span></td></tr>
+    <tr><td>Intensity <b>&gt;</b> ridge</td><td>The calculator is <b>swamped</b></td><td><span class="tag calc">compute-bound</span></td></tr>
+    <tr><td>Intensity <b>=</b> ridge</td><td>Both busy all the time</td><td><span class="tag ok">balanced</span></td></tr>
+  </table>
+  <p>The time formula you derived yourself: <code>time = max(FLOPs ÷ P, bytes ÷ B)</code>.</p>
+
+  <!-- 5 real names -->
+  <h2><span class="n">5</span>The real names and formulas</h2>
+  <p>Same ideas, in the words papers, docs and profilers use.</p>
+  <table>
+    <tr><th>Toy word</th><th>Real term</th><th>Symbol · unit</th></tr>
+    <tr><td>🧮 Calculator</td><td>Compute units</td><td>—</td></tr>
+    <tr><td>Calculator speed</td><td><b>Peak compute throughput</b> ("peak FLOPS")</td><td>P · FLOP/s</td></tr>
+    <tr><td>🚚 Carrier</td><td>Memory system (DRAM / HBM → chip)</td><td>—</td></tr>
+    <tr><td>Carrier speed</td><td><b>Memory bandwidth</b></td><td>B · bytes/s</td></tr>
+    <tr><td>Job</td><td><b>Kernel</b> or operation (e.g. one matmul)</td><td>—</td></tr>
+    <tr><td>Math in the job</td><td><b>Work</b>, FLOP count</td><td>F · FLOPs</td></tr>
+    <tr><td>Bytes in the job</td><td><b>Memory traffic</b> (data movement)</td><td>Q · bytes</td></tr>
+    <tr><td>Work per byte</td><td><b>Arithmetic intensity</b></td><td>I = F / Q · FLOP/byte</td></tr>
+    <tr><td>Ridge</td><td><b>Ridge point</b>, or <b>machine balance</b></td><td>P / B · FLOP/byte</td></tr>
+    <tr><td>Starved calculator</td><td><b>Memory-bound</b> (or bandwidth-bound)</td><td>I &lt; P / B</td></tr>
+    <tr><td>Swamped calculator</td><td><b>Compute-bound</b></td><td>I &gt; P / B</td></tr>
+    <tr><td>% of time calculator is busy</td><td><b>Compute utilization</b></td><td>achieved ÷ P</td></tr>
+    <tr><td>Speed the job actually gets</td><td><b>Attainable performance</b></td><td>FLOP/s</td></tr>
+    <tr><td>The roof line</td><td><b>Roofline model</b> (Williams et al., 2009)</td><td>—</td></tr>
+  </table>
+
+  <div class="card">
+    <b>The roofline formulas</b>
+    <table>
+      <tr><td>Arithmetic intensity</td><td><code>I = F / Q</code></td></tr>
+      <tr><td>Ridge point</td><td><code>I* = P / B</code></td></tr>
+      <tr><td>Lower bound on time</td><td><code>t ≥ max(F / P, Q / B)</code></td></tr>
+      <tr><td>Attainable performance (the roof)</td><td><code>perf ≤ min(P, B × I)</code></td></tr>
+      <tr><td>Achieved FLOP/s (from a measurement)</td><td><code>F / measured_seconds</code></td></tr>
+    </table>
+    <p style="margin:6px 0 0">The time form and the roof form say the same thing. Divide F by the time bound and you get the roof.</p>
+  </div>
+
+  <div class="card">
+    <b>Where F and Q come from for a matmul</b> <code>(M, K) @ (K, N)</code>, with <code>s</code> bytes per element
+    <table>
+      <tr><td>Work</td><td><code>F = 2 · M · N · K</code></td><td>K multiply-adds per output; 1 multiply-add = 2 FLOPs</td></tr>
+      <tr><td>Traffic</td><td><code>Q = (M·K + K·N + M·N) · s</code></td><td>Read A once, read B once, write the output once</td></tr>
+    </table>
+    <p style="margin:6px 0 0">Hand check: <code>(2,4) @ (4,3)</code> in fp32 (s = 4) → F = 2·2·3·4 = <b>48</b>, Q = (8+12+6)·4 = <b>104</b>, I ≈ <b>0.46</b>.</p>
+    <p style="margin:6px 0 0;color:var(--muted);font-size:.9rem">Q is an idealized <i>model</i> of traffic, not a measurement. Caches, repeated loads and tiling change the real bytes moved.</p>
+  </div>
+
+  <div class="card">
+    <b>Bytes per element (s)</b>: fp32 = 4 · fp16 / bf16 = 2 · int8 = 1 · 4-bit = 0.5
+  </div>
+
+  <!-- 6 interactive -->
+  <h2><span class="n">6</span>Try it</h2>
+  <div class="card">
+    <div class="ctrl"><label for="F">Work F (FLOPs)</label><input id="F" type="range" min="2" max="200" step="2" value="20"><output id="Fo"></output></div>
+    <div class="ctrl"><label for="Q">Traffic Q (bytes)</label><input id="Q" type="range" min="1" max="40" step="1" value="8"><output id="Qo"></output></div>
+    <div class="ctrl"><label for="P" class="calc">Peak compute P</label><input id="P" type="range" min="2" max="40" step="1" value="10"><output id="Po"></output></div>
+    <div class="ctrl"><label for="B" class="carry">Bandwidth B</label><input id="B" type="range" min="1" max="10" step="1" value="2"><output id="Bo"></output></div>
+
+    <div class="bar-row"><span class="calc">🧮 F / P</span><div class="track"><div id="barC" class="fill" style="background:var(--calc)"></div></div></div>
+    <div class="bar-row"><span class="carry">🚚 Q / B</span><div class="track"><div id="barM" class="fill" style="background:var(--carry)"></div></div></div>
+    <div class="verdict" id="verdict"></div>
+
+    <svg id="roof" viewBox="0 0 520 280" width="100%" role="img" aria-label="Roofline plot">
+      <g id="roofG"></g>
+    </svg>
+    <p style="color:var(--muted);font-size:.9rem;margin:0">The line is the best possible speed at each intensity. Sloped part: the carrier limits you. Flat part: the calculator limits you. Real code lands <i>below</i> the roof, never above it.</p>
+  </div>
+
+  <!-- 7 -->
+  <h2><span class="n">7</span>How to fix a memory-bound job</h2>
+  <table>
+    <tr><th>Lever</th><th>What changes</th><th>Real-world name</th></tr>
+    <tr><td>Faster carrier</td><td>B goes up</td><td><b>More memory bandwidth</b> (new hardware)</td></tr>
+    <tr><td>More math reusing the <i>same</i> bytes</td><td>Intensity goes up</td><td><b>Batching</b></td></tr>
+    <tr><td>Fewer bytes for the same math</td><td>Intensity goes up</td><td><b>Quantization</b></td></tr>
+  </table>
+  <div class="card">
+    <b>Catch on batching:</b> the extra work must reuse bytes you're already moving.<br>
+    <span class="bad">✗</span> Job A run twice separately: 40 FLOPs, 16 bytes. Intensity is still 2.5.<br>
+    <span class="ok">✓</span> Two requests sharing one read of the weights: 40 FLOPs, about 8 bytes. Intensity is about 5.
+  </div>
+  <p>If a job is <b>compute-bound</b>, none of these help much. You need a faster calculator (more FLOP/s).</p>
+
+  <!-- 8 -->
+  <h2><span class="n">8</span>Back to your model (Week 1 numbers)</h2>
+  <div class="grid2">
+    <div class="card"><b>Decode</b>: <span class="tag carry">memory-bound</span><br>
+      Reads <i>all</i> the weights to make <b>one</b> token. Little math per byte, intensity around 1, far left of the ridge.<br>
+      → Flat at <b>~250 tok/s</b> whatever the prompt length.</div>
+    <div class="card"><b>Prefill</b>: moves toward <span class="tag calc">compute-bound</span><br>
+      Reads the weights <b>once</b> for every prompt token. Much more math per byte.<br>
+      → Got faster with longer prompts: <b>768 → 2,034 tok/s</b>.</div>
+  </div>
+  <p>Your model is <b>4-bit</b> (quantization lever) and serving systems <b>batch</b> users together (batching lever). Both raise intensity for decode.</p>
+
+  <!-- 9 -->
+  <h2><span class="n">9</span>Check yourself</h2>
+  <div class="card">
+    Same toy machine (10 FLOPs/sec, 2 bytes/sec). A job has <b>30 FLOPs</b> and <b>10 bytes</b>. Starved or swamped? How long does it take?
+    <details><summary>Answer</summary>
+      Intensity = 30 ÷ 10 = 3, below the ridge of 5, so the calculator is <b>starved</b> (memory-bound).
+      Time = max(30 ÷ 10, 10 ÷ 2) = max(3, 5) = <b>5 s</b>.
+    </details>
+  </div>
+  <div class="card">
+    Same machine. Double the bandwidth to 4 bytes/sec. How fast are Job A and Job B now?
+    <details><summary>Answer</summary>
+      Job A: max(2, 8 ÷ 4 = 2) = <b>2 s</b>, twice as fast. Job B: max(10, 2) = <b>10 s</b>, unchanged.
+      Speeding up the worker who isn't the bottleneck does nothing.
+    </details>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const ids = ["F","Q","P","B"];
+const fmt = x => (Math.round(x * 100) / 100).toString();
+
+function draw() {
+  const F = +$("F").value, Q = +$("Q").value, P = +$("P").value, B = +$("B").value;
+  ids.forEach(k => $(k + "o").textContent = $(k).value);
+
+  const tC = F / P, tM = Q / B, t = Math.max(tC, tM);
+  $("barC").style.width = (tC / t * 100) + "%";
+  $("barM").style.width = (tM / t * 100) + "%";
+  $("barC").textContent = fmt(tC) + " s";
+  $("barM").textContent = fmt(tM) + " s";
+
+  const I = F / Q, ridge = P / B, used = (F / t) / P * 100;
+  let msg;
+  if (Math.abs(I - ridge) < 1e-9) {
+    msg = `<span class="ok">Balanced.</span> Arithmetic intensity ${fmt(I)} equals the ridge point ${fmt(ridge)}. Both workers stay busy.`;
+  } else if (I < ridge) {
+    msg = `<span class="carry">Memory-bound.</span> Arithmetic intensity ${fmt(I)} &lt; ridge point ${fmt(ridge)}. Compute utilization is only <b>${fmt(used)}%</b>: the calculator starves.`;
+  } else {
+    msg = `<span class="calc">Compute-bound.</span> Arithmetic intensity ${fmt(I)} &gt; ridge point ${fmt(ridge)}. The calculator is swamped and the carrier waits.`;
+  }
+  $("verdict").innerHTML = `Time bound <b>max(F/P, Q/B) = max(${fmt(tC)}, ${fmt(tM)}) = ${fmt(t)} s</b>. ` + msg;
+
+  // roofline plot
+  const W = 520, H = 280, L = 48, R = 16, T = 16, Bt = 36;
+  const xMax = Math.max(20, Math.ceil(Math.max(I, ridge) * 1.3));
+  const yMax = P * 1.25;
+  const x = v => L + v / xMax * (W - L - R);
+  const y = v => H - Bt - v / yMax * (H - T - Bt);
+  const css = getComputedStyle(document.documentElement);
+  const c = n => css.getPropertyValue(n).trim();
+  const speed = Math.min(P, B * I);
+
+  let s = "";
+  s += `<line x1="${L}" y1="${y(0)}" x2="${W - R}" y2="${y(0)}" stroke="${c("--line")}"/>`;
+  s += `<line x1="${L}" y1="${T}" x2="${L}" y2="${y(0)}" stroke="${c("--line")}"/>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">intensity (FLOPs per byte)</text>`;
+  s += `<text x="14" y="${(T + y(0)) / 2}" transform="rotate(-90 14 ${(T + y(0)) / 2})" text-anchor="middle">attainable FLOP/s</text>`;
+  s += `<text x="${L - 6}" y="${y(P) + 4}" text-anchor="end">${P}</text>`;
+  s += `<text x="${x(xMax)}" y="${y(0) + 16}" text-anchor="end">${xMax}</text>`;
+  // roof
+  s += `<polyline points="${x(0)},${y(0)} ${x(ridge)},${y(P)} ${x(xMax)},${y(P)}" fill="none" stroke="${c("--ink")}" stroke-width="2.5"/>`;
+  s += `<line x1="${x(ridge)}" y1="${y(P)}" x2="${x(ridge)}" y2="${y(0)}" stroke="${c("--muted")}" stroke-dasharray="4 4"/>`;
+  s += `<text x="${x(ridge)}" y="${y(0) + 16}" text-anchor="middle">ridge P/B = ${fmt(ridge)}</text>`;
+  s += `<text x="${x(ridge / 2) - 6}" y="${y(P / 2) - 8}" text-anchor="end" style="fill:${c("--carry")}">memory-bound (B × I)</text>`;
+  s += `<text x="${(x(ridge) + x(xMax)) / 2}" y="${y(P) - 8}" text-anchor="middle" style="fill:${c("--calc")}">compute-bound (P)</text>`;
+  // job point
+  const col = I < ridge ? c("--carry") : c("--calc");
+  s += `<circle cx="${x(I)}" cy="${y(speed)}" r="7" fill="${col}"/>`;
+  s += `<text x="${x(I) + 10}" y="${y(speed) + 18}" style="fill:${c("--ink")}">your job: ${fmt(speed)} FLOP/s</text>`;
+  $("roofG").innerHTML = s;
+}
+ids.forEach(k => $(k).addEventListener("input", draw));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+draw();
+</script>
+</body>
+</html>
