@@ -1,5 +1,8 @@
 [tool.uv.workspace]
-members = ["00-foundations"]
+members = [
+    "00-foundations",
+    "side_quests/bandwidth_bench/py_test",
+]
 
 [dependency-groups]
 dev = [
